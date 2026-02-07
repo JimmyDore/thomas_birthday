@@ -67,6 +67,7 @@ Recent decisions affecting current work:
 
 1. **Save best scores in localStorage** — persist high scores on device for replayability
 2. **Improve watch brand name visibility** — names hard to read during gameplay
+3. **Increase difficulty - positive score should be a nightmare** — game too easy currently
 
 ### Blockers/Concerns
 
