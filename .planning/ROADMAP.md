@@ -55,7 +55,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02.1-01-PLAN.md -- Brand visibility, difficulty rebalance, localStorage high scores
+- [x] 02.1-01-PLAN.md -- Brand visibility, difficulty rebalance, localStorage high scores
 
 ### Phase 3: Ship It
 **Goal**: The game is live at coupe-des-montres.jimmydore.fr with HTTPS and auto-deploys on push
@@ -77,5 +77,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
 | 2. Complete Game | 2/2 | Complete | 2026-02-07 |
-| 2.1 Gameplay Polish | 0/1 | Not started | - |
+| 2.1 Gameplay Polish | 1/1 | Complete | 2026-02-07 |
 | 3. Ship It | 1/2 | In progress | - |
