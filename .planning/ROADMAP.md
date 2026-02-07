@@ -25,7 +25,7 @@ Watch Ninja ships in three phases: build the core slashing mechanics first so th
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Canvas foundation, game loop, touch input, swipe trail, and mobile setup
+- [x] 01-01-PLAN.md -- Canvas foundation, game loop, touch input, swipe trail, and mobile setup
 - [ ] 01-02-PLAN.md -- Watch spawning, physics, slash detection, split animation, particles, and scoring
 
 ### Phase 2: Complete Game
@@ -61,6 +61,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Slashing | 0/2 | Planned | - |
+| 1. Core Slashing | 1/2 | In progress | - |
 | 2. Complete Game | 0/2 | Not started | - |
 | 3. Ship It | 0/1 | Not started | - |
