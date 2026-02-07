@@ -38,11 +38,11 @@ Plans:
   3. Fake watch brand names get progressively sneakier over the round (Montignak early, subtler misspellings later)
   4. Slashing a watch shows floating feedback text ("Bonne affaire!" or "Arnaque!") and a rare golden watch appears for big bonus money
   5. Game over screen shows final profit, a Vinted seller rating based on performance, Thomas's birthday message, and a replay button
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Start screen, timer, difficulty ramp, game over flow
-- [ ] 02-02: Humor content -- fake names progression, feedback text, golden watch, Vinted rating, birthday message
+- [ ] 02-01-PLAN.md -- Game state machine, start screen, timer, difficulty ramp, game over screen, replay
+- [ ] 02-02-PLAN.md -- Fake name progression, floating feedback, golden watch, combo system, Vinted rating, birthday message
 
 ### Phase 3: Ship It
 **Goal**: The game is live at roi-du-vinted.jimmydore.fr with HTTPS and auto-deploys on push
