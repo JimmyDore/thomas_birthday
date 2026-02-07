@@ -60,7 +60,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None.
+1. **Save best scores in localStorage** — persist high scores on device for replayability
 
 ### Blockers/Concerns
 
