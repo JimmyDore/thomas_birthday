@@ -1,5 +1,5 @@
-// Watch Ninja - Core Slashing Game
-// Phase 01: Foundation + Gameplay (canvas, game loop, input, watches, slashing, scoring)
+// Watch Ninja - Le Vinted des Montres
+// Phase 01: Foundation + Gameplay | Phase 02: Game flow, timer, difficulty, screens
 
 // --- Canvas & Display ---
 const canvas = document.getElementById('game');
@@ -9,9 +9,16 @@ let canvasHeight = 0;
 let dpr = 1;
 
 // --- Game State ---
+var gameState = 'start'; // 'start' | 'playing' | 'over'
+var ROUND_DURATION = 60;  // seconds
+var elapsed = 0;
+var stats = { realSlashed: 0, fakeSlashed: 0, goldenSlashed: 0, maxCombo: 0, totalWatches: 0 };
 let score = 0;
 let paused = false;
 let lastTime = 0;
+
+// --- Decorative Watches (start screen) ---
+var decorWatches = [];
 
 // --- Trail State ---
 const trailPoints = [];
@@ -67,18 +74,29 @@ function initCanvas() {
 function setupInput() {
   canvas.addEventListener('pointerdown', function (e) {
     e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    var px = e.clientX - rect.left;
+    var py = e.clientY - rect.top;
+
+    if (gameState === 'start') {
+      handleStartTap(px, py);
+      return;
+    }
+
+    if (gameState === 'over') {
+      handleReplayTap(px, py);
+      return;
+    }
+
+    // gameState === 'playing' -- swipe logic
     isPointerDown = true;
     trailPoints.length = 0; // Clear old trail on new swipe
-    var rect = canvas.getBoundingClientRect();
-    trailPoints.push({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-      time: performance.now()
-    });
+    trailPoints.push({ x: px, y: py, time: performance.now() });
   });
 
   canvas.addEventListener('pointermove', function (e) {
     e.preventDefault();
+    if (gameState !== 'playing') return;
     if (!isPointerDown) return;
     var rect = canvas.getBoundingClientRect();
     trailPoints.push({
@@ -147,6 +165,8 @@ function spawnWatch() {
     slashed: false,
     value: isFake ? -8 : 15
   });
+
+  stats.totalWatches++;
 }
 
 // --- Watch Physics ---
@@ -281,6 +301,13 @@ function checkSlashCollisions() {
 function slashWatch(watch, slashAngle) {
   // Mark immediately to prevent double-detection (Pitfall 5)
   watch.slashed = true;
+
+  // Stats tracking
+  if (watch.isFake) {
+    stats.fakeSlashed++;
+  } else {
+    stats.realSlashed++;
+  }
 
   // Update score
   score += watch.value;
@@ -797,10 +824,169 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// --- Timer Display ---
+
+function renderTimer() {
+  var remaining = Math.max(0, Math.ceil(ROUND_DURATION - elapsed));
+  var isWarning = remaining <= 10;
+  var isFinal = remaining <= 3;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+
+  if (isFinal && remaining > 0) {
+    // Pulse effect: scale based on fractional second
+    var frac = (ROUND_DURATION - elapsed) % 1;
+    var scale = 1 + (1 - frac) * 0.3; // pulse from 1.3x down to 1.0x
+    ctx.font = 'bold ' + Math.round(28 * scale) + 'px sans-serif';
+  } else {
+    ctx.font = 'bold ' + (isWarning ? 32 : 28) + 'px sans-serif';
+  }
+
+  ctx.fillStyle = isWarning ? '#ff4444' : '#ffffff';
+  ctx.fillText(remaining.toString(), canvasWidth / 2, 16);
+}
+
+// --- Start Screen ---
+
+var startButton = { x: 0, y: 0, w: 200, h: 56 };
+
+function initDecorWatches() {
+  decorWatches = [];
+  var positions = [
+    { xr: 0.15, yr: 0.3 },
+    { xr: 0.82, yr: 0.25 },
+    { xr: 0.25, yr: 0.72 },
+    { xr: 0.75, yr: 0.68 },
+    { xr: 0.5, yr: 0.15 },
+    { xr: 0.6, yr: 0.85 }
+  ];
+  for (var i = 0; i < positions.length; i++) {
+    var p = positions[i];
+    decorWatches.push({
+      x: 0, y: 0, // will be set relative to canvas size each frame
+      xr: p.xr, yr: p.yr,
+      size: WATCH_SIZE * (0.8 + Math.random() * 0.4),
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.5,
+      isFake: Math.random() < 0.4,
+      sneaky: false,
+      brand: Math.random() < 0.4 ? FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)] : 'Montignac',
+      style: WATCH_STYLES[Math.floor(Math.random() * WATCH_STYLES.length)],
+      slashed: false
+    });
+  }
+}
+
+function renderStart(dt) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  renderBackground();
+
+  // Update and draw decorative watches
+  for (var i = 0; i < decorWatches.length; i++) {
+    var dw = decorWatches[i];
+    dw.x = canvasWidth * dw.xr;
+    dw.y = canvasHeight * dw.yr;
+    if (dt) dw.rotation += dw.rotationSpeed * dt;
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    drawWatch(ctx, dw);
+    ctx.restore();
+  }
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText('Le Vinted des Montres', canvasWidth / 2, canvasHeight * 0.25);
+
+  // Subtitle with Thomas's name
+  ctx.font = '18px sans-serif';
+  ctx.fillText('Thomas, prouve que tu es le roi !', canvasWidth / 2, canvasHeight * 0.25 + 40);
+
+  // Play button (recalculate position each frame for responsiveness)
+  startButton.w = 200;
+  startButton.h = 56;
+  startButton.x = canvasWidth / 2 - startButton.w / 2;
+  startButton.y = canvasHeight * 0.6 - startButton.h / 2;
+
+  // Button background (white rounded rect)
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  roundRect(ctx, startButton.x, startButton.y, startButton.w, startButton.h, 12);
+  ctx.fill();
+
+  // Button text
+  ctx.fillStyle = '#007782';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Jouer', canvasWidth / 2, startButton.y + startButton.h / 2);
+}
+
+function handleStartTap(px, py) {
+  if (px >= startButton.x && px <= startButton.x + startButton.w &&
+      py >= startButton.y && py <= startButton.y + startButton.h) {
+    startGame();
+  }
+}
+
+// --- Game Over Screen (placeholder for Task 2) ---
+
+var replayButton = { x: 0, y: 0, w: 200, h: 56 };
+
+function renderGameOver() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  renderBackground();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText('Temps \u00e9coul\u00e9 !', canvasWidth / 2, canvasHeight * 0.3);
+
+  ctx.font = '20px sans-serif';
+  ctx.fillText('Score: ' + score + '\u20AC', canvasWidth / 2, canvasHeight * 0.45);
+}
+
+function handleReplayTap(px, py) {
+  // Placeholder -- full replay button added in Task 2
+}
+
+// --- Game Start & Reset ---
+
+function startGame() {
+  resetGame();
+  gameState = 'playing';
+  lastTime = 0;
+}
+
+function resetGame() {
+  score = 0;
+  elapsed = 0;
+  spawnTimer = 0;
+  watches.length = 0;
+  splitHalves.length = 0;
+  particles.length = 0;
+  floatingTexts.length = 0;
+  trailPoints.length = 0;
+  isPointerDown = false;
+  stats = { realSlashed: 0, fakeSlashed: 0, goldenSlashed: 0, maxCombo: 0, totalWatches: 0 };
+  lastTime = 0;
+}
+
 // --- Game Loop ---
 
 function update(dt) {
   updateTrail();
+
+  // Timer
+  elapsed += dt;
+  if (elapsed >= ROUND_DURATION) {
+    gameState = 'over';
+    return;
+  }
 
   // Watch spawning
   spawnTimer += dt;
@@ -832,6 +1018,7 @@ function render() {
   renderParticles();
   renderFloatingTexts();
   renderScore();
+  renderTimer();
 }
 
 function gameLoop(timestamp) {
@@ -846,8 +1033,14 @@ function gameLoop(timestamp) {
   var dt = Math.min((timestamp - lastTime) / 1000, 0.05);
   lastTime = timestamp;
 
-  update(dt);
-  render();
+  if (gameState === 'start') {
+    renderStart(dt);
+  } else if (gameState === 'playing') {
+    update(dt);
+    render();
+  } else if (gameState === 'over') {
+    renderGameOver();
+  }
 
   requestAnimationFrame(gameLoop);
 }
@@ -856,4 +1049,5 @@ function gameLoop(timestamp) {
 
 initCanvas();
 setupInput();
+initDecorWatches();
 requestAnimationFrame(gameLoop);
