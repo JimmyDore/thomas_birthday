@@ -22,11 +22,11 @@ Watch Ninja ships in three phases: build the core slashing mechanics first so th
   3. Swiping a finger across the screen draws a visible fading trail and slashing a watch splits it into two tumbling halves
   4. Real Montignac watches add euros to the score, fake watches subtract euros, and the running profit is displayed on screen
   5. The entire UI text is in French
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Canvas foundation, game loop, touch input, and mobile setup
-- [ ] 01-02: Watch spawning, physics, slash detection, split animation, and scoring
+- [ ] 01-01-PLAN.md -- Canvas foundation, game loop, touch input, swipe trail, and mobile setup
+- [ ] 01-02-PLAN.md -- Watch spawning, physics, slash detection, split animation, particles, and scoring
 
 ### Phase 2: Complete Game
 **Goal**: Thomas can play a full timed round with increasing difficulty, see his Vinted seller rating, and read his birthday message
@@ -61,6 +61,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Slashing | 0/2 | Not started | - |
+| 1. Core Slashing | 0/2 | Planned | - |
 | 2. Complete Game | 0/2 | Not started | - |
 | 3. Ship It | 0/1 | Not started | - |
