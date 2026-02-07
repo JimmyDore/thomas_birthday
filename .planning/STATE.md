@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Phase 2 -- Complete Game
+**Current focus:** Phase 3 -- Deploy
 
 ## Current Position
 
 Phase: 2 of 3 (Complete Game)
-Plan: 1 of 2 in phase 2
-Status: In progress
-Last activity: 2026-02-07 -- Completed 02-01-PLAN.md (Game Flow)
+Plan: 2 of 2 in phase 2
+Status: Phase complete
+Last activity: 2026-02-07 -- Completed 02-02-PLAN.md (Humor & Polish)
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 3min
-- Total execution time: 10min
+- Total plans completed: 4
+- Average duration: 4min
+- Total execution time: 15min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-core-slashing | 2/2 | 6min | 3min |
-| 02-complete-game | 1/2 | 4min | 4min |
+| 02-complete-game | 2/2 | 9min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (4min), 02-01 (4min)
+- Last 5 plans: 01-01 (2min), 01-02 (4min), 02-01 (4min), 02-02 (5min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -57,10 +57,15 @@ Recent decisions affecting current work:
 - [02-01]: Difficulty drives spawn interval (1.2s->0.4s), speed (1x->1.4x), fake ratio (15%->55%), sneaky ratio (10%->50%)
 - [02-01]: Button positions recalculated from canvas dimensions every render frame for resize safety
 - [02-01]: String-based game state machine with dispatch in game loop ('start'|'playing'|'over')
+- [02-02]: FAKE_NAMES_PROGRESSION with pickFakeName(t) using 0.7x bias for easier names early
+- [02-02]: Combo thresholds: 3=x2, 6=x3, 10=x4, 15=x5 with reset on fake slash or missed real
+- [02-02]: Rating tiers: <0=1star, 0+=2star, 50+=3star, 150+=4star, 300+=5star
+- [02-02]: Golden watch: 3% spawn, #DAA520 gold, 1.2x size, +50 euro base value
+- [02-02]: Birthday message with Unicode escapes for French accents
 
 ### Pending Todos
 
-1. **Save best scores in localStorage** — persist high scores on device for replayability
+None.
 
 ### Blockers/Concerns
 
@@ -68,6 +73,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T12:36:52Z
-Stopped at: Completed 02-01-PLAN.md (Game Flow)
+Last session: 2026-02-07T12:45:13Z
+Stopped at: Completed 02-02-PLAN.md (Humor & Polish)
 Resume file: None
