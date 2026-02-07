@@ -8,8 +8,8 @@ Watch Ninja ships in three phases: build the core slashing mechanics first so th
 
 - [x] **Phase 1: Core Slashing** - Watches fly, player swipes to slash, score tracks profit in euros
 - [x] **Phase 2: Complete Game** - Timer, difficulty ramp, start/end screens, humor content, birthday personalization
-- [ ] **Phase 2.1: Gameplay Polish** - Brand visibility, brutal difficulty, localStorage high scores (INSERTED)
-- [ ] **Phase 3: Ship It** - nginx server block + SSL + CI/CD to coupe-des-montres.jimmydore.fr
+- [x] **Phase 2.1: Gameplay Polish** - Brand visibility, brutal difficulty, localStorage high scores (INSERTED)
+- [x] **Phase 3: Ship It** - nginx server block + SSL + CI/CD to coupe-des-montres.jimmydore.fr
 
 ## Phase Details
 
@@ -69,7 +69,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md -- Local deployment assets (OG tags, favicon, GitHub Actions workflow, repo + secrets setup)
-- [ ] 03-02-PLAN.md -- VPS setup (git clone, nginx config, SSL) and end-to-end verification
+- [x] 03-02-PLAN.md -- VPS setup (git clone, nginx config, SSL) and end-to-end verification
 
 ## Progress
 
@@ -78,4 +78,4 @@ Plans:
 | 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
 | 2. Complete Game | 2/2 | Complete | 2026-02-07 |
 | 2.1 Gameplay Polish | 1/1 | Complete | 2026-02-07 |
-| 3. Ship It | 1/2 | In progress | - |
+| 3. Ship It | 2/2 | Complete | 2026-02-07 |
