@@ -2,13 +2,13 @@
 
 ## Overview
 
-Watch Ninja ships in three phases: build the core slashing mechanics first so the game feels satisfying on mobile, then add game structure and all the Thomas-specific humor that makes it a birthday joke, then deploy to roi-du-vinted.jimmydore.fr. The entire project is a vanilla JS + Canvas static game targeting mobile Chrome.
+Watch Ninja ships in three phases: build the core slashing mechanics first so the game feels satisfying on mobile, then add game structure and all the Thomas-specific humor that makes it a birthday joke, then deploy to coupe-des-montres.jimmydore.fr. The entire project is a vanilla JS + Canvas static game targeting mobile Chrome.
 
 ## Phases
 
 - [x] **Phase 1: Core Slashing** - Watches fly, player swipes to slash, score tracks profit in euros
 - [x] **Phase 2: Complete Game** - Timer, difficulty ramp, start/end screens, humor content, birthday personalization
-- [ ] **Phase 3: Ship It** - Docker + nginx + SSL + CI/CD to roi-du-vinted.jimmydore.fr
+- [ ] **Phase 3: Ship It** - nginx server block + SSL + CI/CD to coupe-des-montres.jimmydore.fr
 
 ## Phase Details
 
@@ -45,17 +45,17 @@ Plans:
 - [x] 02-02-PLAN.md -- Fake name progression, floating feedback, golden watch, combo system, Vinted rating, birthday message
 
 ### Phase 3: Ship It
-**Goal**: The game is live at roi-du-vinted.jimmydore.fr with HTTPS and auto-deploys on push
+**Goal**: The game is live at coupe-des-montres.jimmydore.fr with HTTPS and auto-deploys on push
 **Depends on**: Phase 2
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04
 **Success Criteria** (what must be TRUE):
-  1. Visiting https://roi-du-vinted.jimmydore.fr on mobile Chrome loads and plays the game
-  2. Pushing to main on GitHub triggers an automated deployment that updates the live site
+  1. Visiting https://coupe-des-montres.jimmydore.fr on mobile Chrome loads and plays the game
+  2. Pushing to master on GitHub triggers an automated deployment that updates the live site
   3. The site serves over HTTPS with a valid SSL certificate
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: Dockerfile, nginx config, GitHub Actions CI/CD, SSL setup, DNS
+- [ ] 03-01: nginx server block, GitHub Actions CI/CD, SSL setup, OG meta tags
 
 ## Progress
 
