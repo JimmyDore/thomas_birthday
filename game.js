@@ -907,18 +907,23 @@ function renderBackground() {
 // --- Score Display ---
 
 function renderScore() {
+  var sign = score >= 0 ? '+' : '';
+  var scoreText = sign + score + '\u20AC';
+  ctx.font = 'bold 20px sans-serif';
+  var textW = ctx.measureText(scoreText).width;
+  var pillW = Math.max(80, textW + 24);
+
   // Semi-transparent dark pill background
   ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
   ctx.beginPath();
-  roundRect(ctx, 10, 10, 120, 36, 8);
+  roundRect(ctx, 10, 10, pillW, 36, 8);
   ctx.fill();
 
-  // Score text
-  ctx.font = 'bold 20px sans-serif';
-  ctx.textBaseline = 'top';
+  // Score text (centered in pill)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
   ctx.fillStyle = score < 0 ? '#ff6666' : '#ffffff';
-  var sign = score >= 0 ? '+' : '';
-  ctx.fillText(sign + score + '\u20AC', 18, 18);
+  ctx.fillText(scoreText, 10 + pillW / 2, 28);
 }
 
 // Rounded rectangle helper
@@ -943,7 +948,7 @@ function renderTimer() {
   var isFinal = remaining <= 3;
 
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'middle';
 
   if (isFinal && remaining > 0) {
     // Pulse effect: scale based on fractional second
@@ -955,7 +960,7 @@ function renderTimer() {
   }
 
   ctx.fillStyle = isWarning ? '#ff4444' : '#ffffff';
-  ctx.fillText(remaining.toString(), canvasWidth / 2, 16);
+  ctx.fillText(remaining.toString(), canvasWidth / 2, 28);
 }
 
 // --- Combo Display ---
@@ -970,11 +975,11 @@ function renderCombo(dt) {
 
   ctx.save();
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'middle';
   var fontSize = Math.round(20 * comboDisplayScale);
   ctx.font = 'bold ' + fontSize + 'px sans-serif';
   ctx.fillStyle = '#FFD700';
-  ctx.fillText('x' + comboMultiplier, 18, 52);
+  ctx.fillText('x' + comboMultiplier, 14, 60);
   ctx.restore();
 }
 
@@ -987,23 +992,30 @@ function renderRating() {
     starStr += (i < rating.stars) ? '\u2605' : '\u2606';
   }
 
+  // Measure to size pill dynamically
+  ctx.font = 'bold 14px sans-serif';
+  var starsW = ctx.measureText(starStr).width;
+  ctx.font = '11px sans-serif';
+  var labelW = ctx.measureText(rating.label).width;
+  var pillW = Math.max(starsW, labelW) + 24;
+
   // Semi-transparent dark pill background (mirroring score pill)
   ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
   ctx.beginPath();
-  roundRect(ctx, canvasWidth - 130, 10, 120, 36, 8);
+  roundRect(ctx, canvasWidth - pillW - 10, 10, pillW, 36, 8);
   ctx.fill();
 
-  // Stars
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.font = 'bold 16px sans-serif';
+  // Stars (upper half of pill)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 14px sans-serif';
   ctx.fillStyle = '#FFD700';
-  ctx.fillText(starStr, canvasWidth - 15, 14);
+  ctx.fillText(starStr, canvasWidth - 10 - pillW / 2, 22);
 
-  // Label
+  // Label (lower half of pill)
   ctx.font = '11px sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(rating.label, canvasWidth - 15, 32);
+  ctx.fillText(rating.label, canvasWidth - 10 - pillW / 2, 38);
 }
 
 // --- Start Screen ---
