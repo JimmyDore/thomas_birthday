@@ -7,11 +7,11 @@
 
 ### Core Gameplay
 
-- [ ] **GAME-01**: Watches fly across the screen in parabolic arcs
-- [ ] **GAME-02**: Player swipes to slash watches with visible finger trail
-- [ ] **GAME-03**: Slashed watches split with satisfying animation
-- [ ] **GAME-04**: Real Montignac = earn money, fake watches = lose money
-- [ ] **GAME-05**: Running score displayed as profit in euros
+- [x] **GAME-01**: Watches fly across the screen in parabolic arcs
+- [x] **GAME-02**: Player swipes to slash watches with visible finger trail
+- [x] **GAME-03**: Slashed watches split with satisfying animation
+- [x] **GAME-04**: Real Montignac = earn money, fake watches = lose money
+- [x] **GAME-05**: Running score displayed as profit in euros
 - [ ] **GAME-06**: Round lasts 60-90 seconds with countdown timer
 - [ ] **GAME-07**: Difficulty ramps up (more watches, faster spawns)
 - [ ] **GAME-08**: Game over screen with final score
@@ -30,8 +30,8 @@
 
 ### Game Feel
 
-- [ ] **FEEL-01**: Swipe trail effect following finger
-- [ ] **FEEL-02**: Haptic vibration on slash (if device supports it)
+- [x] **FEEL-01**: Swipe trail effect following finger
+- [x] **FEEL-02**: Haptic vibration on slash (if device supports it)
 
 ### Infrastructure
 
@@ -42,9 +42,9 @@
 
 ### Platform
 
-- [ ] **PLAT-01**: Mobile-first design (Chrome on phone), touch-based swiping
-- [ ] **PLAT-02**: Entire UI in French
-- [ ] **PLAT-03**: No install needed — plays in browser
+- [x] **PLAT-01**: Mobile-first design (Chrome on phone), touch-based swiping
+- [x] **PLAT-02**: Entire UI in French
+- [x] **PLAT-03**: No install needed — plays in browser
 
 ## v2 Requirements
 
@@ -74,11 +74,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GAME-01 | Phase 1 | Pending |
-| GAME-02 | Phase 1 | Pending |
-| GAME-03 | Phase 1 | Pending |
-| GAME-04 | Phase 1 | Pending |
-| GAME-05 | Phase 1 | Pending |
+| GAME-01 | Phase 1 | Complete |
+| GAME-02 | Phase 1 | Complete |
+| GAME-03 | Phase 1 | Complete |
+| GAME-04 | Phase 1 | Complete |
+| GAME-05 | Phase 1 | Complete |
 | GAME-06 | Phase 2 | Pending |
 | GAME-07 | Phase 2 | Pending |
 | GAME-08 | Phase 2 | Pending |
@@ -88,15 +88,15 @@
 | CONT-04 | Phase 2 | Pending |
 | PERS-01 | Phase 2 | Pending |
 | PERS-02 | Phase 2 | Pending |
-| FEEL-01 | Phase 1 | Pending |
-| FEEL-02 | Phase 1 | Pending |
+| FEEL-01 | Phase 1 | Complete |
+| FEEL-02 | Phase 1 | Complete |
 | INFRA-01 | Phase 3 | Pending |
 | INFRA-02 | Phase 3 | Pending |
 | INFRA-03 | Phase 3 | Pending |
 | INFRA-04 | Phase 3 | Pending |
-| PLAT-01 | Phase 1 | Pending |
-| PLAT-02 | Phase 1 | Pending |
-| PLAT-03 | Phase 1 | Pending |
+| PLAT-01 | Phase 1 | Complete |
+| PLAT-02 | Phase 1 | Complete |
+| PLAT-03 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total
