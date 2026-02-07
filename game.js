@@ -125,30 +125,47 @@ function hapticFeedback(ms) {
   if (navigator.vibrate) navigator.vibrate(ms);
 }
 
+// --- Difficulty Ramp ---
+
+function getDifficulty() {
+  var t = Math.min(1, elapsed / ROUND_DURATION);
+  var tEased = t * t; // quadratic ease-in: slow start, frantic end
+  return {
+    spawnInterval: Math.max(0.3, 1.2 - tEased * 0.8),  // 1.2s -> 0.4s
+    speedMultiplier: 1.0 + t * 0.4,                      // 1.0x -> 1.4x
+    fakeChance: 0.15 + t * 0.4,                          // 15% -> 55%
+    sneakyChance: 0.1 + t * 0.4                           // 10% -> 50% of fakes
+  };
+}
+
 // --- Watch Spawning ---
 
-function spawnWatch() {
+function spawnWatch(diff) {
+  var speedMult = diff ? diff.speedMultiplier : 1.0;
+  var fakeChance = diff ? diff.fakeChance : 0.4;
+  var sneakyChance = diff ? diff.sneakyChance : 0.3;
+
   var fromLeft = Math.random() < 0.5;
   var x = fromLeft
     ? canvasWidth * (0.1 + Math.random() * 0.3)
     : canvasWidth * (0.6 + Math.random() * 0.3);
 
   var vx = fromLeft
-    ? 30 + Math.random() * 80
-    : -(30 + Math.random() * 80);
+    ? (30 + Math.random() * 80) * speedMult
+    : -(30 + Math.random() * 80) * speedMult;
 
   // Scale launch velocity with screen height so watches reach upper third
   var baseVy = canvasHeight * 0.9 + 200;
-  var vy = -(baseVy + Math.random() * canvasHeight * 0.25);
+  var vy = -(baseVy + Math.random() * canvasHeight * 0.25) * speedMult;
 
-  var isFake = Math.random() < 0.4;
+  var isFake = Math.random() < fakeChance;
   var brand = isFake
     ? FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)]
     : 'Montignac';
   var style = WATCH_STYLES[Math.floor(Math.random() * WATCH_STYLES.length)];
 
-  // ~30% of fakes are sneaky (same green color as real, only name differs)
-  var sneaky = isFake && Math.random() < 0.3;
+  // Sneaky fakes use same green color as real -- only misspelled name distinguishes them
+  var sneaky = isFake && Math.random() < sneakyChance;
 
   watches.push({
     x: x,
@@ -932,7 +949,7 @@ function handleStartTap(px, py) {
   }
 }
 
-// --- Game Over Screen (placeholder for Task 2) ---
+// --- Game Over Screen ---
 
 var replayButton = { x: 0, y: 0, w: 200, h: 56 };
 
@@ -942,16 +959,53 @@ function renderGameOver() {
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
+  // Header
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 28px sans-serif';
-  ctx.fillText('Temps \u00e9coul\u00e9 !', canvasWidth / 2, canvasHeight * 0.3);
+  ctx.fillText('Temps \u00e9coul\u00e9 !', canvasWidth / 2, canvasHeight * 0.15);
 
-  ctx.font = '20px sans-serif';
-  ctx.fillText('Score: ' + score + '\u20AC', canvasWidth / 2, canvasHeight * 0.45);
+  // Score breakdown
+  ctx.font = '18px sans-serif';
+  var lineY = canvasHeight * 0.28;
+  var lineGap = 32;
+
+  ctx.fillText('Montres vendues : ' + stats.realSlashed, canvasWidth / 2, lineY);
+  lineY += lineGap;
+  ctx.fillText('Contrefa\u00e7ons tranch\u00e9es : ' + stats.fakeSlashed, canvasWidth / 2, lineY);
+  lineY += lineGap;
+
+  // Final profit with sign
+  var profitSign = score >= 0 ? '+' : '';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillStyle = score >= 0 ? '#50e880' : '#ff6666';
+  ctx.fillText('Profit final : ' + profitSign + score + '\u20AC', canvasWidth / 2, lineY);
+
+  // Replay button (recalculate position each frame for responsiveness)
+  replayButton.w = 200;
+  replayButton.h = 56;
+  replayButton.x = canvasWidth / 2 - replayButton.w / 2;
+  replayButton.y = canvasHeight * 0.75 - replayButton.h / 2;
+
+  // Button background (white rounded rect)
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  roundRect(ctx, replayButton.x, replayButton.y, replayButton.w, replayButton.h, 12);
+  ctx.fill();
+
+  // Button text
+  ctx.fillStyle = '#007782';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Rejouer', canvasWidth / 2, replayButton.y + replayButton.h / 2);
 }
 
 function handleReplayTap(px, py) {
-  // Placeholder -- full replay button added in Task 2
+  if (px >= replayButton.x && px <= replayButton.x + replayButton.w &&
+      py >= replayButton.y && py <= replayButton.y + replayButton.h) {
+    startGame();
+  }
 }
 
 // --- Game Start & Reset ---
@@ -988,11 +1042,14 @@ function update(dt) {
     return;
   }
 
-  // Watch spawning
+  // Dynamic difficulty
+  var diff = getDifficulty();
+
+  // Watch spawning with dynamic interval
   spawnTimer += dt;
-  if (spawnTimer >= SPAWN_INTERVAL) {
-    spawnTimer -= SPAWN_INTERVAL;
-    spawnWatch();
+  if (spawnTimer >= diff.spawnInterval) {
+    spawnTimer -= diff.spawnInterval;
+    spawnWatch(diff);
   }
 
   // Slash detection BEFORE physics update (check current positions)
