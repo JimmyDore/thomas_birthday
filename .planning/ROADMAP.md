@@ -68,7 +68,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Local deployment assets (OG tags, favicon, GitHub Actions workflow, repo + secrets setup)
+- [x] 03-01-PLAN.md -- Local deployment assets (OG tags, favicon, GitHub Actions workflow, repo + secrets setup)
 - [ ] 03-02-PLAN.md -- VPS setup (git clone, nginx config, SSL) and end-to-end verification
 
 ## Progress
@@ -78,4 +78,4 @@ Plans:
 | 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
 | 2. Complete Game | 2/2 | Complete | 2026-02-07 |
 | 2.1 Gameplay Polish | 0/1 | Not started | - |
-| 3. Ship It | 0/2 | Not started | - |
+| 3. Ship It | 1/2 | In progress | - |

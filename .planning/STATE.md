@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Phase 2.1 -- Gameplay Polish
+**Current focus:** Phase 3 -- Ship It
 
 ## Current Position
 
-Phase: 2 of 3 (Complete Game)
-Plan: 2 of 2 in phase 2
-Status: Phase complete
-Last activity: 2026-02-07 -- Completed 02-02-PLAN.md (Humor & Polish)
+Phase: 3 of 3 (Ship It)
+Plan: 1 of 2 in phase 3
+Status: In progress
+Last activity: 2026-02-07 -- Completed 03-01-PLAN.md (Local Deployment Assets)
 
-Progress: [████████░░] 80%
+Progress: [███████░░░] 71% (5/7 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 4min
-- Total execution time: 15min
+- Total plans completed: 5
+- Average duration: 3min
+- Total execution time: 17min
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [████████░░] 80%
 |-------|-------|-------|----------|
 | 01-core-slashing | 2/2 | 6min | 3min |
 | 02-complete-game | 2/2 | 9min | 5min |
+| 03-ship-it | 1/2 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (4min), 02-01 (4min), 02-02 (5min)
-- Trend: Consistent fast execution
+- Last 5 plans: 01-02 (4min), 02-01 (4min), 02-02 (5min), 03-01 (2min)
+- Trend: Consistent fast execution, infra plan was fastest
 
 *Updated after each plan completion*
 
@@ -62,13 +63,17 @@ Recent decisions affecting current work:
 - [02-02]: Rating tiers: <0=1star, 0+=2star, 50+=3star, 150+=4star, 300+=5star
 - [02-02]: Golden watch: 3% spawn, #DAA520 gold, 1.2x size, +50 euro base value
 - [02-02]: Birthday message with Unicode escapes for French accents
+- [03-01]: Inline SVG emoji favicon (crossed swords) -- no file needed
+- [03-01]: appleboy/ssh-action@v1 for SSH git-pull deploy
+- [03-01]: Dedicated ED25519 deploy key for GitHub Actions CI/CD
+- [03-01]: OG description in French with Fruit Ninja parody hint
 
 ### Pending Todos
 
 All 3 todos absorbed into Phase 2.1 (Gameplay Polish):
-1. ~~Save best scores in localStorage~~ → Phase 2.1
-2. ~~Improve watch brand name visibility~~ → Phase 2.1
-3. ~~Increase difficulty - positive score should be a nightmare~~ → Phase 2.1
+1. ~~Save best scores in localStorage~~ -> Phase 2.1
+2. ~~Improve watch brand name visibility~~ -> Phase 2.1
+3. ~~Increase difficulty - positive score should be a nightmare~~ -> Phase 2.1
 
 ### Blockers/Concerns
 
@@ -76,6 +81,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T12:45:13Z
-Stopped at: Completed 02-02-PLAN.md (Humor & Polish)
+Last session: 2026-02-07T14:04:24Z
+Stopped at: Completed 03-01-PLAN.md (Local Deployment Assets)
 Resume file: None
