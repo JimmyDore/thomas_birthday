@@ -12,21 +12,21 @@
 - [x] **GAME-03**: Slashed watches split with satisfying animation
 - [x] **GAME-04**: Real Montignac = earn money, fake watches = lose money
 - [x] **GAME-05**: Running score displayed as profit in euros
-- [ ] **GAME-06**: Round lasts 60-90 seconds with countdown timer
-- [ ] **GAME-07**: Difficulty ramps up (more watches, faster spawns)
-- [ ] **GAME-08**: Game over screen with final score
+- [x] **GAME-06**: Round lasts 60-90 seconds with countdown timer
+- [x] **GAME-07**: Difficulty ramps up (more watches, faster spawns)
+- [x] **GAME-08**: Game over screen with final score
 
 ### Content & Humor
 
-- [ ] **CONT-01**: Fake brand names (Montignak, Montinyac) that get sneakier over time
-- [ ] **CONT-02**: Feedback text on slash ("Bonne affaire!" / "Arnaque!")
-- [ ] **CONT-03**: Special rare golden watch worth big bonus money
-- [ ] **CONT-04**: Vinted seller rating on game over screen based on performance
+- [x] **CONT-01**: Fake brand names (Montignak, Montinyac) that get sneakier over time
+- [x] **CONT-02**: Feedback text on slash ("Bonne affaire!" / "Arnaque!")
+- [x] **CONT-03**: Special rare golden watch worth big bonus money
+- [x] **CONT-04**: Vinted seller rating on game over screen based on performance
 
 ### Personalization
 
-- [ ] **PERS-01**: Thomas's name on title screen and score screen
-- [ ] **PERS-02**: Birthday message
+- [x] **PERS-01**: Thomas's name on title screen and score screen
+- [x] **PERS-02**: Birthday message
 
 ### Game Feel
 
@@ -79,15 +79,15 @@
 | GAME-03 | Phase 1 | Complete |
 | GAME-04 | Phase 1 | Complete |
 | GAME-05 | Phase 1 | Complete |
-| GAME-06 | Phase 2 | Pending |
-| GAME-07 | Phase 2 | Pending |
-| GAME-08 | Phase 2 | Pending |
-| CONT-01 | Phase 2 | Pending |
-| CONT-02 | Phase 2 | Pending |
-| CONT-03 | Phase 2 | Pending |
-| CONT-04 | Phase 2 | Pending |
-| PERS-01 | Phase 2 | Pending |
-| PERS-02 | Phase 2 | Pending |
+| GAME-06 | Phase 2 | Complete |
+| GAME-07 | Phase 2 | Complete |
+| GAME-08 | Phase 2 | Complete |
+| CONT-01 | Phase 2 | Complete |
+| CONT-02 | Phase 2 | Complete |
+| CONT-03 | Phase 2 | Complete |
+| CONT-04 | Phase 2 | Complete |
+| PERS-01 | Phase 2 | Complete |
+| PERS-02 | Phase 2 | Complete |
 | FEEL-01 | Phase 1 | Complete |
 | FEEL-02 | Phase 1 | Complete |
 | INFRA-01 | Phase 3 | Pending |

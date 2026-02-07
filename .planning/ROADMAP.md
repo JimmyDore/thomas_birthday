@@ -7,7 +7,7 @@ Watch Ninja ships in three phases: build the core slashing mechanics first so th
 ## Phases
 
 - [x] **Phase 1: Core Slashing** - Watches fly, player swipes to slash, score tracks profit in euros
-- [ ] **Phase 2: Complete Game** - Timer, difficulty ramp, start/end screens, humor content, birthday personalization
+- [x] **Phase 2: Complete Game** - Timer, difficulty ramp, start/end screens, humor content, birthday personalization
 - [ ] **Phase 3: Ship It** - Docker + nginx + SSL + CI/CD to roi-du-vinted.jimmydore.fr
 
 ## Phase Details
@@ -41,8 +41,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Game state machine, start screen, timer, difficulty ramp, game over screen, replay
-- [ ] 02-02-PLAN.md -- Fake name progression, floating feedback, golden watch, combo system, Vinted rating, birthday message
+- [x] 02-01-PLAN.md -- Game state machine, start screen, timer, difficulty ramp, game over screen, replay
+- [x] 02-02-PLAN.md -- Fake name progression, floating feedback, golden watch, combo system, Vinted rating, birthday message
 
 ### Phase 3: Ship It
 **Goal**: The game is live at roi-du-vinted.jimmydore.fr with HTTPS and auto-deploys on push
@@ -62,5 +62,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
-| 2. Complete Game | 0/2 | Not started | - |
+| 2. Complete Game | 2/2 | Complete | 2026-02-07 |
 | 3. Ship It | 0/1 | Not started | - |
