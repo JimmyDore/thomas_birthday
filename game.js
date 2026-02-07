@@ -224,6 +224,250 @@ function renderFloatingTexts() {
   }
 }
 
+// --- Collision Detection ---
+
+function lineSegmentIntersectsCircle(ax, ay, bx, by, cx, cy, r) {
+  var dx = bx - ax;
+  var dy = by - ay;
+  var fx = ax - cx;
+  var fy = ay - cy;
+
+  var segLenSq = dx * dx + dy * dy;
+  if (segLenSq === 0) {
+    // Degenerate segment (single point)
+    return (fx * fx + fy * fy) <= r * r;
+  }
+
+  // Project circle center onto line, clamped to segment
+  var t = -(fx * dx + fy * dy) / segLenSq;
+  t = Math.max(0, Math.min(1, t));
+
+  // Nearest point on segment to circle center
+  var nearestX = ax + t * dx;
+  var nearestY = ay + t * dy;
+
+  var distX = nearestX - cx;
+  var distY = nearestY - cy;
+
+  return (distX * distX + distY * distY) <= r * r;
+}
+
+function checkSlashCollisions() {
+  if (trailPoints.length < 2) return;
+
+  // Only check recent trail segments (last 5-6 points)
+  var start = Math.max(0, trailPoints.length - 6);
+  for (var i = start + 1; i < trailPoints.length; i++) {
+    var p0 = trailPoints[i - 1];
+    var p1 = trailPoints[i];
+
+    for (var j = watches.length - 1; j >= 0; j--) {
+      var w = watches[j];
+      if (w.slashed) continue;
+
+      var hitRadius = w.size / 2 * 1.2; // 20% generous hitbox
+      if (lineSegmentIntersectsCircle(p0.x, p0.y, p1.x, p1.y, w.x, w.y, hitRadius)) {
+        var slashAngle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+        slashWatch(w, slashAngle);
+      }
+    }
+  }
+}
+
+// --- Slash Handler ---
+
+function slashWatch(watch, slashAngle) {
+  // Mark immediately to prevent double-detection (Pitfall 5)
+  watch.slashed = true;
+
+  // Update score
+  score += watch.value;
+
+  // Create split halves
+  var halves = createSplitHalves(watch, slashAngle);
+  for (var i = 0; i < halves.length; i++) {
+    splitHalves.push(halves[i]);
+  }
+
+  // Spawn particles
+  spawnParticles(watch.x, watch.y, watch.isFake, 12);
+
+  // Spawn floating text
+  spawnFloatingText(watch.x, watch.y, watch.value, watch.isFake, false);
+
+  // Haptic feedback
+  hapticFeedback(30);
+
+  // Remove the watch from active array
+  var idx = watches.indexOf(watch);
+  if (idx !== -1) watches.splice(idx, 1);
+}
+
+// --- Split Halves ---
+
+function createSplitHalves(watch, slashAngle) {
+  var perpAngle = slashAngle + Math.PI / 2;
+  var pushSpeed = 80;
+
+  return [
+    { // Left half
+      x: watch.x,
+      y: watch.y,
+      vx: watch.vx + Math.cos(perpAngle) * pushSpeed,
+      vy: watch.vy + Math.sin(perpAngle) * pushSpeed,
+      rotation: watch.rotation,
+      rotationSpeed: -(3 + Math.random() * 4),
+      size: watch.size,
+      brand: watch.brand,
+      isFake: watch.isFake,
+      sneaky: watch.sneaky,
+      style: watch.style,
+      clipSide: 'left',
+      alpha: 1.0,
+      life: 1.0,
+      age: 0
+    },
+    { // Right half
+      x: watch.x,
+      y: watch.y,
+      vx: watch.vx - Math.cos(perpAngle) * pushSpeed,
+      vy: watch.vy - Math.sin(perpAngle) * pushSpeed,
+      rotation: watch.rotation,
+      rotationSpeed: 3 + Math.random() * 4,
+      size: watch.size,
+      brand: watch.brand,
+      isFake: watch.isFake,
+      sneaky: watch.sneaky,
+      style: watch.style,
+      clipSide: 'right',
+      alpha: 1.0,
+      life: 1.0,
+      age: 0
+    }
+  ];
+}
+
+function updateSplitHalves(dt) {
+  for (var i = splitHalves.length - 1; i >= 0; i--) {
+    var h = splitHalves[i];
+    h.vy += GRAVITY * dt;
+    h.x += h.vx * dt;
+    h.y += h.vy * dt;
+    h.rotation += h.rotationSpeed * dt;
+    h.age += dt;
+    h.alpha = Math.max(0, 1 - h.age / h.life);
+
+    // Remove when expired or off-screen
+    if (h.age >= h.life || h.y > canvasHeight + 200) {
+      splitHalves.splice(i, 1);
+    }
+  }
+}
+
+function renderSplitHalves() {
+  for (var i = 0; i < splitHalves.length; i++) {
+    renderHalf(ctx, splitHalves[i]);
+  }
+}
+
+function renderHalf(ctx, half) {
+  ctx.save();
+  ctx.translate(half.x, half.y);
+  ctx.rotate(half.rotation);
+  ctx.globalAlpha = half.alpha;
+
+  // Clip to one side
+  var large = half.size * 2;
+  ctx.beginPath();
+  if (half.clipSide === 'right') {
+    ctx.rect(0, -large, large, large * 2);
+  } else {
+    ctx.rect(-large, -large, large, large * 2);
+  }
+  ctx.clip();
+
+  // Draw the full watch at origin (already translated/rotated)
+  // Create a temporary watch-like object at (0,0) with no rotation
+  var tempWatch = {
+    x: 0,
+    y: 0,
+    size: half.size,
+    rotation: 0,
+    isFake: half.isFake,
+    sneaky: half.sneaky,
+    brand: half.brand,
+    style: half.style
+  };
+
+  // Determine case color
+  var caseColor;
+  if (tempWatch.isFake && !tempWatch.sneaky) {
+    caseColor = '#cc3333';
+  } else {
+    caseColor = '#2a7d4f';
+  }
+
+  var r = tempWatch.size / 2;
+  if (tempWatch.style === 'round') {
+    drawRoundWatch(ctx, r, caseColor, tempWatch.brand, tempWatch.size);
+  } else if (tempWatch.style === 'square') {
+    drawSquareWatch(ctx, r, caseColor, tempWatch.brand, tempWatch.size);
+  } else {
+    drawSportWatch(ctx, r, caseColor, tempWatch.brand, tempWatch.size);
+  }
+
+  ctx.restore(); // CRITICAL: restores clip state
+}
+
+// --- Particle System ---
+
+function spawnParticles(x, y, isFake, count) {
+  // Hard cap to prevent unbounded growth (Pitfall 4)
+  if (particles.length > 200) return;
+
+  var color = isFake ? '220, 50, 50' : '50, 180, 80';
+  for (var i = 0; i < count; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 50 + Math.random() * 150;
+    particles.push({
+      x: x,
+      y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 50, // slight upward bias
+      radius: 2 + Math.random() * 3,
+      color: color,
+      alpha: 1.0,
+      life: 0.4 + Math.random() * 0.3,
+      age: 0
+    });
+  }
+}
+
+function updateParticles(dt) {
+  for (var i = particles.length - 1; i >= 0; i--) {
+    var p = particles[i];
+    p.vx *= 0.98; // slight drag
+    p.vy += 400 * dt; // gravity (lighter than watches)
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.age += dt;
+    p.alpha = Math.max(0, 1 - p.age / p.life);
+    if (p.age >= p.life) {
+      particles.splice(i, 1);
+    }
+  }
+}
+
+function renderParticles() {
+  for (var i = 0; i < particles.length; i++) {
+    var p = particles[i];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(' + p.color + ', ' + p.alpha + ')';
+    ctx.fill();
+  }
+}
+
 // --- Watch Drawing (3 styles) ---
 
 function drawWatch(ctx, watch) {
@@ -563,7 +807,12 @@ function update(dt) {
     spawnWatch();
   }
 
+  // Slash detection BEFORE physics update (check current positions)
+  checkSlashCollisions();
+
   updateWatches(dt);
+  updateSplitHalves(dt);
+  updateParticles(dt);
   updateFloatingTexts(dt);
 }
 
@@ -577,6 +826,8 @@ function render() {
   }
 
   renderTrail();
+  renderSplitHalves();
+  renderParticles();
   renderFloatingTexts();
   renderScore();
 }
