@@ -20,6 +20,35 @@ var comboDisplayScale = 1.0; // for brief scale-up animation
 let paused = false;
 let lastTime = 0;
 
+// --- High Score Persistence ---
+var STORAGE_KEY = 'watchNinja_bestScore';
+var bestScore = null;
+var isNewBest = false;
+
+function loadBestScore() {
+  try {
+    var stored = localStorage.getItem(STORAGE_KEY);
+    if (stored !== null) {
+      var parsed = JSON.parse(stored);
+      if (typeof parsed === 'number' && isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (e) { /* localStorage unavailable or corrupted -- fail silently */ }
+  return null;
+}
+
+function saveBestScore(newScore) {
+  try {
+    if (bestScore === null || newScore > bestScore) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newScore));
+      bestScore = newScore;
+      return true;
+    }
+  } catch (e) { /* localStorage unavailable -- fail silently */ }
+  return false;
+}
+
 // --- Decorative Watches (start screen) ---
 var decorWatches = [];
 
@@ -1081,6 +1110,14 @@ function renderStart(dt) {
   ctx.font = '18px sans-serif';
   ctx.fillText('Thomas, prouve que tu es le roi !', canvasWidth / 2, canvasHeight * 0.25 + 40);
 
+  // Best score on start screen
+  if (bestScore !== null) {
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'center';
+    ctx.fillText('Meilleur score : ' + (bestScore >= 0 ? '+' : '') + bestScore + '\u20AC', canvasWidth / 2, canvasHeight * 0.25 + 70);
+  }
+
   // Play button (recalculate position each frame for responsiveness)
   startButton.w = 200;
   startButton.h = 56;
@@ -1156,6 +1193,20 @@ function renderGameOver() {
   // Optional: max combo
   if (stats.maxCombo >= 3) {
     ctx.fillText('Meilleur combo : x' + getMultiplier(stats.maxCombo), cx, lineY);
+    lineY += lineGap;
+  }
+
+  // Best score display
+  if (bestScore !== null) {
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('Record : ' + (bestScore >= 0 ? '+' : '') + bestScore + '\u20AC', cx, lineY);
+    lineY += lineGap;
+  }
+  if (isNewBest) {
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#50e880';
+    ctx.fillText('Nouveau record !', cx, lineY);
     lineY += lineGap;
   }
 
@@ -1239,6 +1290,7 @@ function resetGame() {
   floatingTexts.length = 0;
   trailPoints.length = 0;
   isPointerDown = false;
+  isNewBest = false;
   stats = { realSlashed: 0, fakeSlashed: 0, goldenSlashed: 0, maxCombo: 0, totalWatches: 0 };
   lastTime = 0;
 }
@@ -1251,6 +1303,7 @@ function update(dt) {
   // Timer
   elapsed += dt;
   if (elapsed >= ROUND_DURATION) {
+    isNewBest = saveBestScore(score);
     gameState = 'over';
     return;
   }
@@ -1320,6 +1373,7 @@ function gameLoop(timestamp) {
 // --- Start ---
 
 initCanvas();
+bestScore = loadBestScore();
 setupInput();
 initDecorWatches();
 requestAnimationFrame(gameLoop);
