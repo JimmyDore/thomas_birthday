@@ -841,10 +841,15 @@ function drawSportWatch(ctx, r, caseColor, brand, size) {
 
 // -- Shared brand label drawing --
 function drawBrandLabel(ctx, brand, r, size) {
-  ctx.fillStyle = '#333';
-  ctx.font = 'bold ' + Math.max(10, size * 0.18) + 'px sans-serif';
+  var fontSize = Math.max(11, size * 0.22);
+  ctx.font = 'bold ' + fontSize + 'px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  // Stroke first (outline), then fill -- standard Canvas text outline technique
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#ffffff';
+  ctx.strokeText(brand, 0, r * 0.3);
+  ctx.fillStyle = '#333';
   ctx.fillText(brand, 0, r * 0.3);
 }
 
