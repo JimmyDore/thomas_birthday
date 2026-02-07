@@ -9,28 +9,29 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 
 ## Current Position
 
-Phase: 1 of 3 (Core Slashing) -- COMPLETE
-Plan: 2 of 2 in phase 1
-Status: Phase complete
-Last activity: 2026-02-07 -- Completed 01-02-PLAN.md (Gameplay Mechanics)
+Phase: 2 of 3 (Complete Game)
+Plan: 1 of 2 in phase 2
+Status: In progress
+Last activity: 2026-02-07 -- Completed 02-01-PLAN.md (Game Flow)
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 3min
-- Total execution time: 6min
+- Total execution time: 10min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-core-slashing | 2/2 | 6min | 3min |
+| 02-complete-game | 1/2 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (4min)
+- Last 5 plans: 01-01 (2min), 01-02 (4min), 02-01 (4min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -52,6 +53,10 @@ Recent decisions affecting current work:
 - [01-02]: Collision detection runs before physics update (current-frame positions)
 - [01-02]: Split halves reuse full drawWatch + clip rather than custom half-draw functions
 - [01-02]: Side-exit watches also trigger missed penalty (no penalty-free escapes)
+- [02-01]: Quadratic ease-in (t*t) for difficulty ramp -- slow start, frantic end
+- [02-01]: Difficulty drives spawn interval (1.2s->0.4s), speed (1x->1.4x), fake ratio (15%->55%), sneaky ratio (10%->50%)
+- [02-01]: Button positions recalculated from canvas dimensions every render frame for resize safety
+- [02-01]: String-based game state machine with dispatch in game loop ('start'|'playing'|'over')
 
 ### Pending Todos
 
@@ -63,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T11:47:03Z
-Stopped at: Completed 01-02-PLAN.md (Gameplay Mechanics)
+Last session: 2026-02-07T12:36:52Z
+Stopped at: Completed 02-01-PLAN.md (Game Flow)
 Resume file: None
