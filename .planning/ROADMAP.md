@@ -65,10 +65,11 @@ Plans:
   1. Visiting https://coupe-des-montres.jimmydore.fr on mobile Chrome loads and plays the game
   2. Pushing to master on GitHub triggers an automated deployment that updates the live site
   3. The site serves over HTTPS with a valid SSL certificate
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: nginx server block, GitHub Actions CI/CD, SSL setup, OG meta tags
+- [ ] 03-01-PLAN.md -- Local deployment assets (OG tags, favicon, GitHub Actions workflow, repo + secrets setup)
+- [ ] 03-02-PLAN.md -- VPS setup (git clone, nginx config, SSL) and end-to-end verification
 
 ## Progress
 
@@ -77,4 +78,4 @@ Plans:
 | 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
 | 2. Complete Game | 2/2 | Complete | 2026-02-07 |
 | 2.1 Gameplay Polish | 0/1 | Not started | - |
-| 3. Ship It | 0/1 | Not started | - |
+| 3. Ship It | 0/2 | Not started | - |
