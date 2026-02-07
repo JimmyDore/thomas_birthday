@@ -119,7 +119,9 @@ function spawnWatch() {
     ? 30 + Math.random() * 80
     : -(30 + Math.random() * 80);
 
-  var vy = -(450 + Math.random() * 200);
+  // Scale launch velocity with screen height so watches reach upper third
+  var baseVy = canvasHeight * 0.9 + 200;
+  var vy = -(baseVy + Math.random() * canvasHeight * 0.25);
 
   var isFake = Math.random() < 0.4;
   var brand = isFake
