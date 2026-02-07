@@ -52,10 +52,10 @@ Plans:
   1. Watch brand names (THOMAS vs fakes) are clearly legible on mobile during gameplay
   2. Finishing with a positive score is extremely difficult — most players end negative
   3. Best scores are saved in localStorage and displayed on start/game over screens
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02.1-01: Brand visibility, difficulty rebalance, localStorage high scores
+- [ ] 02.1-01-PLAN.md -- Brand visibility, difficulty rebalance, localStorage high scores
 
 ### Phase 3: Ship It
 **Goal**: The game is live at coupe-des-montres.jimmydore.fr with HTTPS and auto-deploys on push
