@@ -12,16 +12,16 @@ See: .planning/PROJECT.md (updated 2026-02-07)
 Phase: 3 of 3 (Ship It)
 Plan: 1 of 2 in phase 3
 Status: In progress
-Last activity: 2026-02-07 -- Completed 03-01-PLAN.md (Local Deployment Assets)
+Last activity: 2026-02-07 -- Completed 02.1-01-PLAN.md (Gameplay Polish) + 03-01-PLAN.md (Local Deployment Assets)
 
-Progress: [███████░░░] 71% (5/7 plans)
+Progress: [████████░░] 86% (6/7 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 3min
-- Total execution time: 17min
+- Total execution time: 20min
 
 **By Phase:**
 
@@ -29,11 +29,12 @@ Progress: [███████░░░] 71% (5/7 plans)
 |-------|-------|-------|----------|
 | 01-core-slashing | 2/2 | 6min | 3min |
 | 02-complete-game | 2/2 | 9min | 5min |
+| 02.1-gameplay-polish | 1/1 | 3min | 3min |
 | 03-ship-it | 1/2 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (4min), 02-01 (4min), 02-02 (5min), 03-01 (2min)
-- Trend: Consistent fast execution, infra plan was fastest
+- Last 5 plans: 02-01 (4min), 02-02 (5min), 02.1-01 (3min), 03-01 (2min)
+- Trend: Consistent fast execution
 
 *Updated after each plan completion*
 
@@ -63,6 +64,9 @@ Recent decisions affecting current work:
 - [02-02]: Rating tiers: <0=1star, 0+=2star, 50+=3star, 150+=4star, 300+=5star
 - [02-02]: Golden watch: 3% spawn, #DAA520 gold, 1.2x size, +50 euro base value
 - [02-02]: Birthday message with Unicode escapes for French accents
+- [02.1-01]: White stroke outline (lineWidth 2.5) with 0.22x font multiplier for mobile brand readability
+- [02.1-01]: Economy shift: real +10 (was +15), fake -15 (was -8), miss -8 (was -5), fakes 20-65% (was 15-55%)
+- [02.1-01]: Single best score in localStorage key 'watchNinja_bestScore' with try-catch wrapping
 - [03-01]: Inline SVG emoji favicon (crossed swords) -- no file needed
 - [03-01]: appleboy/ssh-action@v1 for SSH git-pull deploy
 - [03-01]: Dedicated ED25519 deploy key for GitHub Actions CI/CD
@@ -70,10 +74,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-All 3 todos absorbed into Phase 2.1 (Gameplay Polish):
-1. ~~Save best scores in localStorage~~ -> Phase 2.1
-2. ~~Improve watch brand name visibility~~ -> Phase 2.1
-3. ~~Increase difficulty - positive score should be a nightmare~~ -> Phase 2.1
+All resolved:
+1. ~~Save best scores in localStorage~~ -- Done (02.1-01 Task 3)
+2. ~~Improve watch brand name visibility~~ -- Done (02.1-01 Task 1)
+3. ~~Increase difficulty - positive score should be a nightmare~~ -- Done (02.1-01 Task 2)
 
 ### Blockers/Concerns
 
@@ -81,6 +85,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-07T14:04:24Z
-Stopped at: Completed 03-01-PLAN.md (Local Deployment Assets)
+Last session: 2026-02-07T14:05:08Z
+Stopped at: Completed 02.1-01-PLAN.md (Gameplay Polish)
 Resume file: None
