@@ -1,5 +1,6 @@
-// Watch Ninja - Le Vinted des Montres
+// Watch Ninja - La Coupe des Montres
 // Phase 01: Foundation + Gameplay | Phase 02: Game flow, timer, difficulty, screens
+// Deployed to https://coupe-des-montres.jimmydore.fr
 
 // --- Canvas & Display ---
 const canvas = document.getElementById('game');
