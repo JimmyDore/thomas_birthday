@@ -74,35 +74,35 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GAME-01 | — | Pending |
-| GAME-02 | — | Pending |
-| GAME-03 | — | Pending |
-| GAME-04 | — | Pending |
-| GAME-05 | — | Pending |
-| GAME-06 | — | Pending |
-| GAME-07 | — | Pending |
-| GAME-08 | — | Pending |
-| CONT-01 | — | Pending |
-| CONT-02 | — | Pending |
-| CONT-03 | — | Pending |
-| CONT-04 | — | Pending |
-| PERS-01 | — | Pending |
-| PERS-02 | — | Pending |
-| FEEL-01 | — | Pending |
-| FEEL-02 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| PLAT-01 | — | Pending |
-| PLAT-02 | — | Pending |
-| PLAT-03 | — | Pending |
+| GAME-01 | Phase 1 | Pending |
+| GAME-02 | Phase 1 | Pending |
+| GAME-03 | Phase 1 | Pending |
+| GAME-04 | Phase 1 | Pending |
+| GAME-05 | Phase 1 | Pending |
+| GAME-06 | Phase 2 | Pending |
+| GAME-07 | Phase 2 | Pending |
+| GAME-08 | Phase 2 | Pending |
+| CONT-01 | Phase 2 | Pending |
+| CONT-02 | Phase 2 | Pending |
+| CONT-03 | Phase 2 | Pending |
+| CONT-04 | Phase 2 | Pending |
+| PERS-01 | Phase 2 | Pending |
+| PERS-02 | Phase 2 | Pending |
+| FEEL-01 | Phase 1 | Pending |
+| FEEL-02 | Phase 1 | Pending |
+| INFRA-01 | Phase 3 | Pending |
+| INFRA-02 | Phase 3 | Pending |
+| INFRA-03 | Phase 3 | Pending |
+| INFRA-04 | Phase 3 | Pending |
+| PLAT-01 | Phase 1 | Pending |
+| PLAT-02 | Phase 1 | Pending |
+| PLAT-03 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after initial definition*
+*Last updated: 2026-02-07 after roadmap creation*
