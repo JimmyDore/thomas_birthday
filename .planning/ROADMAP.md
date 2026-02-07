@@ -6,7 +6,7 @@ Watch Ninja ships in three phases: build the core slashing mechanics first so th
 
 ## Phases
 
-- [ ] **Phase 1: Core Slashing** - Watches fly, player swipes to slash, score tracks profit in euros
+- [x] **Phase 1: Core Slashing** - Watches fly, player swipes to slash, score tracks profit in euros
 - [ ] **Phase 2: Complete Game** - Timer, difficulty ramp, start/end screens, humor content, birthday personalization
 - [ ] **Phase 3: Ship It** - Docker + nginx + SSL + CI/CD to roi-du-vinted.jimmydore.fr
 
@@ -26,7 +26,7 @@ Watch Ninja ships in three phases: build the core slashing mechanics first so th
 
 Plans:
 - [x] 01-01-PLAN.md -- Canvas foundation, game loop, touch input, swipe trail, and mobile setup
-- [ ] 01-02-PLAN.md -- Watch spawning, physics, slash detection, split animation, particles, and scoring
+- [x] 01-02-PLAN.md -- Watch spawning, physics, slash detection, split animation, particles, and scoring
 
 ### Phase 2: Complete Game
 **Goal**: Thomas can play a full timed round with increasing difficulty, see his Vinted seller rating, and read his birthday message
@@ -61,6 +61,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Slashing | 1/2 | In progress | - |
+| 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
 | 2. Complete Game | 0/2 | Not started | - |
 | 3. Ship It | 0/1 | Not started | - |
