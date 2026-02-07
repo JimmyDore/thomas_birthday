@@ -38,6 +38,25 @@ var SPAWN_INTERVAL = 1.2; // seconds between spawns (fixed for Phase 1)
 var GRAVITY = 600;        // pixels/sec^2
 var WATCH_SIZE = 60;      // diameter in CSS pixels
 var FAKE_NAMES = ['Montignak', 'Montinyac', 'Montiganc', 'Montigniak', 'Montignaq'];
+
+// Ordered from obviously ridiculous (early game) to near-miss misspellings (late game)
+var FAKE_NAMES_PROGRESSION = [
+  // t = 0.0-0.3: Obviously ridiculous (easy to spot, gets laughs)
+  'Montagniak', 'Montignoque', 'Mortignac', 'Monticrap', 'Montignul',
+  // t = 0.3-0.6: Getting sneakier
+  'Montignak', 'Montinyac', 'Montigniak', 'Montigrac',
+  // t = 0.6-1.0: Near-misses (hard to spot under time pressure!)
+  'Montigac', 'Montiganc', 'Montignaq', 'Montignae'
+];
+
+function pickFakeName(t) {
+  var len = FAKE_NAMES_PROGRESSION.length;
+  var tierStart = Math.floor(t * len * 0.7);
+  tierStart = Math.min(tierStart, len - 1);
+  var tierEnd = Math.min(len, tierStart + 3);
+  var idx = tierStart + Math.floor(Math.random() * (tierEnd - tierStart));
+  return FAKE_NAMES_PROGRESSION[Math.min(idx, len - 1)];
+}
 var WATCH_STYLES = ['round', 'square', 'sport'];
 
 // --- Canvas Initialization ---
@@ -159,28 +178,33 @@ function spawnWatch(diff) {
   var vy = -(baseVy + Math.random() * canvasHeight * 0.25) * speedMult;
 
   var isFake = Math.random() < fakeChance;
+  var isGolden = !isFake && Math.random() < 0.03; // 3% of real watches
   var brand = isFake
-    ? FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)]
+    ? pickFakeName(Math.min(1, elapsed / ROUND_DURATION))
     : 'Montignac';
   var style = WATCH_STYLES[Math.floor(Math.random() * WATCH_STYLES.length)];
 
   // Sneaky fakes use same green color as real -- only misspelled name distinguishes them
   var sneaky = isFake && Math.random() < sneakyChance;
 
+  var watchSize = isGolden ? WATCH_SIZE * 1.2 : WATCH_SIZE;
+  var watchValue = isGolden ? 50 : (isFake ? -8 : 15);
+
   watches.push({
     x: x,
     y: canvasHeight + 50, // start below visible area
     vx: vx,
     vy: vy,
-    size: WATCH_SIZE,
+    size: watchSize,
     rotation: 0,
     rotationSpeed: (Math.random() - 0.5) * 3,
     isFake: isFake,
+    isGolden: isGolden,
     sneaky: sneaky,
     brand: brand,
     style: style,
     slashed: false,
-    value: isFake ? -8 : 15
+    value: watchValue
   });
 
   stats.totalWatches++;
@@ -228,13 +252,29 @@ function spawnFloatingText(x, y, amount, isFake, isMissed) {
     y: y,
     text: (amount >= 0 ? '+' : '') + amount + '\u20AC',
     color: color,
+    fontSize: 22,
     alpha: 1.0,
     vy: -60,
     age: 0,
     life: 1.0
   });
   // Hard cap
-  if (floatingTexts.length > 20) floatingTexts.shift();
+  if (floatingTexts.length > 30) floatingTexts.shift();
+}
+
+function spawnLabelText(x, y, label, colorStr, fontSize) {
+  floatingTexts.push({
+    x: x,
+    y: y,
+    text: label,
+    color: colorStr,
+    fontSize: fontSize || 16,
+    alpha: 1.0,
+    vy: -60,
+    age: 0,
+    life: 1.0
+  });
+  if (floatingTexts.length > 30) floatingTexts.shift();
 }
 
 function updateFloatingTexts(dt) {
@@ -255,7 +295,7 @@ function renderFloatingTexts() {
     ctx.save();
     ctx.globalAlpha = ft.alpha;
     ctx.fillStyle = 'rgba(' + ft.color + ', ' + ft.alpha + ')';
-    ctx.font = 'bold 22px sans-serif';
+    ctx.font = 'bold ' + (ft.fontSize || 22) + 'px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(ft.text, ft.x, ft.y);
@@ -324,6 +364,7 @@ function slashWatch(watch, slashAngle) {
     stats.fakeSlashed++;
   } else {
     stats.realSlashed++;
+    if (watch.isGolden) stats.goldenSlashed++;
   }
 
   // Update score
@@ -335,11 +376,18 @@ function slashWatch(watch, slashAngle) {
     splitHalves.push(halves[i]);
   }
 
-  // Spawn particles
-  spawnParticles(watch.x, watch.y, watch.isFake, 12);
+  // Spawn particles (golden gets gold-colored particles)
+  spawnParticles(watch.x, watch.y, watch.isFake, 12, watch.isGolden);
 
-  // Spawn floating text
-  spawnFloatingText(watch.x, watch.y, watch.value, watch.isFake, false);
+  // Spawn floating label text + euro amount
+  if (watch.isGolden) {
+    spawnLabelText(watch.x, watch.y - 15, 'JACKPOT !', '255, 215, 0', 18);
+  } else if (watch.isFake) {
+    spawnLabelText(watch.x, watch.y - 15, 'Arnaque !', '220, 50, 50', 16);
+  } else {
+    spawnLabelText(watch.x, watch.y - 15, 'Bonne affaire !', '50, 180, 80', 16);
+  }
+  spawnFloatingText(watch.x, watch.y + 10, watch.value, watch.isFake, false);
 
   // Haptic feedback
   hapticFeedback(30);
@@ -366,6 +414,7 @@ function createSplitHalves(watch, slashAngle) {
       size: watch.size,
       brand: watch.brand,
       isFake: watch.isFake,
+      isGolden: watch.isGolden,
       sneaky: watch.sneaky,
       style: watch.style,
       clipSide: 'left',
@@ -383,6 +432,7 @@ function createSplitHalves(watch, slashAngle) {
       size: watch.size,
       brand: watch.brand,
       isFake: watch.isFake,
+      isGolden: watch.isGolden,
       sneaky: watch.sneaky,
       style: watch.style,
       clipSide: 'right',
@@ -447,7 +497,9 @@ function renderHalf(ctx, half) {
 
   // Determine case color
   var caseColor;
-  if (tempWatch.isFake && !tempWatch.sneaky) {
+  if (half.isGolden) {
+    caseColor = '#DAA520';
+  } else if (tempWatch.isFake && !tempWatch.sneaky) {
     caseColor = '#cc3333';
   } else {
     caseColor = '#2a7d4f';
@@ -467,11 +519,11 @@ function renderHalf(ctx, half) {
 
 // --- Particle System ---
 
-function spawnParticles(x, y, isFake, count) {
+function spawnParticles(x, y, isFake, count, isGolden) {
   // Hard cap to prevent unbounded growth (Pitfall 4)
   if (particles.length > 200) return;
 
-  var color = isFake ? '220, 50, 50' : '50, 180, 80';
+  var color = isGolden ? '255, 215, 0' : (isFake ? '220, 50, 50' : '50, 180, 80');
   for (var i = 0; i < count; i++) {
     var angle = Math.random() * Math.PI * 2;
     var speed = 50 + Math.random() * 150;
@@ -518,9 +570,11 @@ function renderParticles() {
 
 function drawWatch(ctx, watch) {
   var r = watch.size / 2;
-  // Determine case color: real = green, non-sneaky fakes = red, sneaky fakes = same green
+  // Determine case color: golden = gold, real = green, non-sneaky fakes = red, sneaky fakes = same green
   var caseColor;
-  if (watch.isFake && !watch.sneaky) {
+  if (watch.isGolden) {
+    caseColor = '#DAA520';
+  } else if (watch.isFake && !watch.sneaky) {
     caseColor = '#cc3333';
   } else {
     caseColor = '#2a7d4f';
