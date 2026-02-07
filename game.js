@@ -173,10 +173,10 @@ function getDifficulty() {
   var t = Math.min(1, elapsed / ROUND_DURATION);
   var tEased = t * t; // quadratic ease-in: slow start, frantic end
   return {
-    spawnInterval: Math.max(0.3, 1.2 - tEased * 0.8),  // 1.2s -> 0.4s
-    speedMultiplier: 1.0 + t * 0.4,                      // 1.0x -> 1.4x
-    fakeChance: 0.15 + t * 0.4,                          // 15% -> 55%
-    sneakyChance: 0.1 + t * 0.4                           // 10% -> 50% of fakes
+    spawnInterval: Math.max(0.3, 1.2 - tEased * 0.9),  // 1.2s -> 0.3s
+    speedMultiplier: 1.0 + t * 0.8,                      // 1.0x -> 1.8x
+    fakeChance: 0.20 + t * 0.45,                          // 20% -> 65%
+    sneakyChance: 0.15 + t * 0.45                          // 15% -> 60% of fakes
   };
 }
 
@@ -211,7 +211,7 @@ function spawnWatch(diff) {
   var sneaky = isFake && Math.random() < sneakyChance;
 
   var watchSize = isGolden ? WATCH_SIZE * 1.2 : WATCH_SIZE;
-  var watchValue = isGolden ? 50 : (isFake ? -8 : 15);
+  var watchValue = isGolden ? 50 : (isFake ? -15 : 10);
 
   watches.push({
     x: x,
@@ -247,10 +247,10 @@ function updateWatches(dt) {
     if (w.y > canvasHeight + 100 && w.vy > 0) {
       // Missed penalty: real Montignac not slashed
       if (!w.slashed && !w.isFake) {
-        score -= 5;
+        score -= 8;
         combo = 0;
         comboMultiplier = 1;
-        spawnFloatingText(w.x, canvasHeight - 30, -5, false, true);
+        spawnFloatingText(w.x, canvasHeight - 30, -8, false, true);
       }
       watches.splice(i, 1);
       continue;
@@ -260,10 +260,10 @@ function updateWatches(dt) {
     if (w.x < -200 || w.x > canvasWidth + 200) {
       // Also penalize if real and unslashed
       if (!w.slashed && !w.isFake) {
-        score -= 5;
+        score -= 8;
         combo = 0;
         comboMultiplier = 1;
-        spawnFloatingText(w.x < -200 ? 30 : canvasWidth - 30, canvasHeight - 30, -5, false, true);
+        spawnFloatingText(w.x < -200 ? 30 : canvasWidth - 30, canvasHeight - 30, -8, false, true);
       }
       watches.splice(i, 1);
     }
