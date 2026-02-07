@@ -14,6 +14,9 @@ var ROUND_DURATION = 60;  // seconds
 var elapsed = 0;
 var stats = { realSlashed: 0, fakeSlashed: 0, goldenSlashed: 0, maxCombo: 0, totalWatches: 0 };
 let score = 0;
+var combo = 0;
+var comboMultiplier = 1;
+var comboDisplayScale = 1.0; // for brief scale-up animation
 let paused = false;
 let lastTime = 0;
 
@@ -58,6 +61,26 @@ function pickFakeName(t) {
   return FAKE_NAMES_PROGRESSION[Math.min(idx, len - 1)];
 }
 var WATCH_STYLES = ['round', 'square', 'sport'];
+
+// --- Combo Multiplier ---
+
+function getMultiplier(c) {
+  if (c >= 15) return 5;
+  if (c >= 10) return 4;
+  if (c >= 6) return 3;
+  if (c >= 3) return 2;
+  return 1;
+}
+
+// --- Vinted Seller Rating ---
+
+function getRating(s) {
+  if (s >= 300) return { stars: 5, label: 'Roi du Vinted' };
+  if (s >= 150) return { stars: 4, label: 'Vendeur confirm\u00e9' };
+  if (s >= 50)  return { stars: 3, label: 'Bon vendeur' };
+  if (s >= 0)   return { stars: 2, label: 'Vendeur d\u00e9butant' };
+  return { stars: 1, label: 'Vendeur douteux' };
+}
 
 // --- Canvas Initialization ---
 
@@ -225,6 +248,8 @@ function updateWatches(dt) {
       // Missed penalty: real Montignac not slashed
       if (!w.slashed && !w.isFake) {
         score -= 5;
+        combo = 0;
+        comboMultiplier = 1;
         spawnFloatingText(w.x, canvasHeight - 30, -5, false, true);
       }
       watches.splice(i, 1);
@@ -236,6 +261,8 @@ function updateWatches(dt) {
       // Also penalize if real and unslashed
       if (!w.slashed && !w.isFake) {
         score -= 5;
+        combo = 0;
+        comboMultiplier = 1;
         spawnFloatingText(w.x < -200 ? 30 : canvasWidth - 30, canvasHeight - 30, -5, false, true);
       }
       watches.splice(i, 1);
@@ -358,6 +385,19 @@ function checkSlashCollisions() {
 function slashWatch(watch, slashAngle) {
   // Mark immediately to prevent double-detection (Pitfall 5)
   watch.slashed = true;
+
+  // Combo system: real watches build combo, fakes reset it
+  if (!watch.isFake) {
+    combo++;
+    comboMultiplier = getMultiplier(combo);
+    comboDisplayScale = 1.3; // brief pop animation
+    stats.maxCombo = Math.max(stats.maxCombo, combo);
+    // Apply combo multiplier to value
+    watch.value = watch.value * comboMultiplier;
+  } else {
+    combo = 0;
+    comboMultiplier = 1;
+  }
 
   // Stats tracking
   if (watch.isFake) {
@@ -918,6 +958,54 @@ function renderTimer() {
   ctx.fillText(remaining.toString(), canvasWidth / 2, 16);
 }
 
+// --- Combo Display ---
+
+function renderCombo(dt) {
+  if (comboMultiplier <= 1) return;
+
+  // Animate scale-up when combo increases
+  if (comboDisplayScale > 1.0) {
+    comboDisplayScale = Math.max(1.0, comboDisplayScale - dt * 1.5);
+  }
+
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  var fontSize = Math.round(20 * comboDisplayScale);
+  ctx.font = 'bold ' + fontSize + 'px sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('x' + comboMultiplier, 18, 52);
+  ctx.restore();
+}
+
+// --- Vinted Rating Display ---
+
+function renderRating() {
+  var rating = getRating(score);
+  var starStr = '';
+  for (var i = 0; i < 5; i++) {
+    starStr += (i < rating.stars) ? '\u2605' : '\u2606';
+  }
+
+  // Semi-transparent dark pill background (mirroring score pill)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.beginPath();
+  roundRect(ctx, canvasWidth - 130, 10, 120, 36, 8);
+  ctx.fill();
+
+  // Stars
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText(starStr, canvasWidth - 15, 14);
+
+  // Label
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(rating.label, canvasWidth - 15, 32);
+}
+
 // --- Start Screen ---
 
 var startButton = { x: 0, y: 0, w: 200, h: 56 };
@@ -1011,35 +1099,86 @@ function renderGameOver() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   renderBackground();
 
+  var cx = canvasWidth / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Header
+  // 1. Header (~12% height)
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 28px sans-serif';
-  ctx.fillText('Temps \u00e9coul\u00e9 !', canvasWidth / 2, canvasHeight * 0.15);
+  ctx.fillText('Temps \u00e9coul\u00e9 !', cx, canvasHeight * 0.12);
 
-  // Score breakdown
+  // 2. Stats block (~25% height)
   ctx.font = '18px sans-serif';
-  var lineY = canvasHeight * 0.28;
-  var lineGap = 32;
+  ctx.fillStyle = '#ffffff';
+  var lineY = canvasHeight * 0.22;
+  var lineGap = 26;
 
-  ctx.fillText('Montres vendues : ' + stats.realSlashed, canvasWidth / 2, lineY);
+  ctx.fillText('Montres vendues : ' + stats.realSlashed, cx, lineY);
   lineY += lineGap;
-  ctx.fillText('Contrefa\u00e7ons tranch\u00e9es : ' + stats.fakeSlashed, canvasWidth / 2, lineY);
+  ctx.fillText('Contrefa\u00e7ons tranch\u00e9es : ' + stats.fakeSlashed, cx, lineY);
   lineY += lineGap;
 
   // Final profit with sign
   var profitSign = score >= 0 ? '+' : '';
   ctx.font = 'bold 22px sans-serif';
   ctx.fillStyle = score >= 0 ? '#50e880' : '#ff6666';
-  ctx.fillText('Profit final : ' + profitSign + score + '\u20AC', canvasWidth / 2, lineY);
+  ctx.fillText('Profit final : ' + profitSign + score + '\u20AC', cx, lineY);
+  lineY += lineGap;
 
-  // Replay button (recalculate position each frame for responsiveness)
+  // Optional: golden watches slashed
+  ctx.font = '18px sans-serif';
+  ctx.fillStyle = '#ffffff';
+  if (stats.goldenSlashed > 0) {
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('Montres en or : ' + stats.goldenSlashed, cx, lineY);
+    lineY += lineGap;
+    ctx.fillStyle = '#ffffff';
+  }
+
+  // Optional: max combo
+  if (stats.maxCombo >= 3) {
+    ctx.fillText('Meilleur combo : x' + getMultiplier(stats.maxCombo), cx, lineY);
+    lineY += lineGap;
+  }
+
+  // 3. Vinted rating verdict (~50% height, large and prominent)
+  var rating = getRating(score);
+  var starStr = '';
+  for (var i = 0; i < 5; i++) {
+    starStr += (i < rating.stars) ? '\u2605' : '\u2606';
+  }
+
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText(starStr, cx, canvasHeight * 0.52);
+
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(rating.label, cx, canvasHeight * 0.52 + 28);
+
+  // 4. Birthday message (~62% height)
+  // Decorative stars above message
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('\u2605  \u2605  \u2605', cx, canvasHeight * 0.63);
+
+  ctx.font = 'italic 18px sans-serif';
+  ctx.fillStyle = '#ffe0a0';
+  ctx.fillText('Joyeux anniversaire mon fr\u00e8re,', cx, canvasHeight * 0.67);
+  ctx.fillText('longue vie aux montres', cx, canvasHeight * 0.67 + 24);
+  ctx.fillText('et \u00e0 Montignac', cx, canvasHeight * 0.67 + 48);
+
+  // Decorative stars below message
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('\u2605  \u2605  \u2605', cx, canvasHeight * 0.67 + 72);
+
+  // 5. Replay button (~85% height)
   replayButton.w = 200;
   replayButton.h = 56;
-  replayButton.x = canvasWidth / 2 - replayButton.w / 2;
-  replayButton.y = canvasHeight * 0.75 - replayButton.h / 2;
+  replayButton.x = cx - replayButton.w / 2;
+  replayButton.y = canvasHeight * 0.85 - replayButton.h / 2;
 
   // Button background (white rounded rect)
   ctx.fillStyle = '#ffffff';
@@ -1052,7 +1191,7 @@ function renderGameOver() {
   ctx.font = 'bold 22px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('Rejouer', canvasWidth / 2, replayButton.y + replayButton.h / 2);
+  ctx.fillText('Rejouer', cx, replayButton.y + replayButton.h / 2);
 }
 
 function handleReplayTap(px, py) {
@@ -1073,6 +1212,9 @@ function startGame() {
 function resetGame() {
   score = 0;
   elapsed = 0;
+  combo = 0;
+  comboMultiplier = 1;
+  comboDisplayScale = 1.0;
   spawnTimer = 0;
   watches.length = 0;
   splitHalves.length = 0;
@@ -1115,7 +1257,7 @@ function update(dt) {
   updateFloatingTexts(dt);
 }
 
-function render() {
+function render(dt) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   renderBackground();
 
@@ -1130,6 +1272,8 @@ function render() {
   renderFloatingTexts();
   renderScore();
   renderTimer();
+  renderCombo(dt);
+  renderRating();
 }
 
 function gameLoop(timestamp) {
@@ -1148,7 +1292,7 @@ function gameLoop(timestamp) {
     renderStart(dt);
   } else if (gameState === 'playing') {
     update(dt);
-    render();
+    render(dt);
   } else if (gameState === 'over') {
     renderGameOver();
   }
