@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Phase 3 -- Deploy
+**Current focus:** Phase 2.1 -- Gameplay Polish
 
 ## Current Position
 
@@ -65,9 +65,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-1. **Save best scores in localStorage** — persist high scores on device for replayability
-2. **Improve watch brand name visibility** — names hard to read during gameplay
-3. **Increase difficulty - positive score should be a nightmare** — game too easy currently
+All 3 todos absorbed into Phase 2.1 (Gameplay Polish):
+1. ~~Save best scores in localStorage~~ → Phase 2.1
+2. ~~Improve watch brand name visibility~~ → Phase 2.1
+3. ~~Increase difficulty - positive score should be a nightmare~~ → Phase 2.1
 
 ### Blockers/Concerns
 

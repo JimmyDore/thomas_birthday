@@ -8,6 +8,7 @@ Watch Ninja ships in three phases: build the core slashing mechanics first so th
 
 - [x] **Phase 1: Core Slashing** - Watches fly, player swipes to slash, score tracks profit in euros
 - [x] **Phase 2: Complete Game** - Timer, difficulty ramp, start/end screens, humor content, birthday personalization
+- [ ] **Phase 2.1: Gameplay Polish** - Brand visibility, brutal difficulty, localStorage high scores (INSERTED)
 - [ ] **Phase 3: Ship It** - nginx server block + SSL + CI/CD to coupe-des-montres.jimmydore.fr
 
 ## Phase Details
@@ -44,6 +45,18 @@ Plans:
 - [x] 02-01-PLAN.md -- Game state machine, start screen, timer, difficulty ramp, game over screen, replay
 - [x] 02-02-PLAN.md -- Fake name progression, floating feedback, golden watch, combo system, Vinted rating, birthday message
 
+### Phase 2.1: Gameplay Polish (INSERTED)
+**Goal**: Watch brands are clearly readable, difficulty is brutal enough that positive score feels like a real achievement, and best scores persist in localStorage
+**Depends on**: Phase 2
+**Success Criteria** (what must be TRUE):
+  1. Watch brand names (THOMAS vs fakes) are clearly legible on mobile during gameplay
+  2. Finishing with a positive score is extremely difficult — most players end negative
+  3. Best scores are saved in localStorage and displayed on start/game over screens
+**Plans**: TBD
+
+Plans:
+- [ ] 02.1-01: Brand visibility, difficulty rebalance, localStorage high scores
+
 ### Phase 3: Ship It
 **Goal**: The game is live at coupe-des-montres.jimmydore.fr with HTTPS and auto-deploys on push
 **Depends on**: Phase 2
@@ -63,4 +76,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
 | 2. Complete Game | 2/2 | Complete | 2026-02-07 |
+| 2.1 Gameplay Polish | 0/1 | Not started | - |
 | 3. Ship It | 0/1 | Not started | - |
