@@ -13,6 +13,12 @@ let score = 0;
 let paused = false;
 let lastTime = 0;
 
+// --- Trail State ---
+const trailPoints = [];
+const TRAIL_LIFETIME = 150; // ms before points fade completely
+const TRAIL_COLOR = '255, 200, 50'; // gold RGB
+let isPointerDown = false;
+
 // --- Canvas Initialization ---
 
 function resize() {
@@ -40,6 +46,86 @@ function initCanvas() {
       requestAnimationFrame(gameLoop);
     }
   });
+}
+
+// --- Input Handling ---
+
+function setupInput() {
+  canvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    isPointerDown = true;
+    trailPoints.length = 0; // Clear old trail on new swipe
+    var rect = canvas.getBoundingClientRect();
+    trailPoints.push({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      time: performance.now()
+    });
+  });
+
+  canvas.addEventListener('pointermove', function (e) {
+    e.preventDefault();
+    if (!isPointerDown) return;
+    var rect = canvas.getBoundingClientRect();
+    trailPoints.push({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      time: performance.now()
+    });
+    // Hard cap to prevent memory issues on long swipes
+    if (trailPoints.length > 100) trailPoints.shift();
+  });
+
+  canvas.addEventListener('pointerup', function (e) {
+    e.preventDefault();
+    isPointerDown = false;
+  });
+
+  canvas.addEventListener('pointercancel', function (e) {
+    e.preventDefault();
+    isPointerDown = false;
+  });
+}
+
+// --- Haptic Feedback ---
+
+function hapticFeedback(ms) {
+  if (navigator.vibrate) navigator.vibrate(ms);
+}
+
+// --- Trail Update & Rendering ---
+
+function updateTrail() {
+  var now = performance.now();
+  while (trailPoints.length > 0 && now - trailPoints[0].time > TRAIL_LIFETIME) {
+    trailPoints.shift();
+  }
+}
+
+function renderTrail() {
+  if (trailPoints.length < 2) return;
+
+  var now = performance.now();
+  ctx.lineCap = 'round';
+
+  for (var i = 1; i < trailPoints.length; i++) {
+    var p0 = trailPoints[i - 1];
+    var p1 = trailPoints[i];
+
+    // Alpha based on age of the newer point
+    var age = (now - p1.time) / TRAIL_LIFETIME;
+    var alpha = Math.max(0, 1 - age);
+
+    // Width: thinner at tail (3px), thicker near finger (8px)
+    var widthRatio = i / trailPoints.length;
+    ctx.lineWidth = 3 + widthRatio * 5;
+
+    ctx.strokeStyle = 'rgba(' + TRAIL_COLOR + ', ' + alpha + ')';
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+  }
 }
 
 // --- Background Rendering ---
@@ -86,12 +172,13 @@ function roundRect(ctx, x, y, w, h, r) {
 // --- Game Loop ---
 
 function update(dt) {
-  // Will be filled by Task 2 (trail) and Plan 02 (watches, physics)
+  updateTrail();
 }
 
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   renderBackground();
+  renderTrail();
   renderScore();
 }
 
@@ -116,4 +203,5 @@ function gameLoop(timestamp) {
 // --- Start ---
 
 initCanvas();
+setupInput();
 requestAnimationFrame(gameLoop);
