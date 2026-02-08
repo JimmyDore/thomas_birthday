@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 6 of 6 (Buy/Sell Mechanic)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 06-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 06-03-PLAN.md
 
-Progress: [=============] 100% (13/14 total plans across v1.0+v1.1)
+Progress: [==============] 100% (14/14 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -24,13 +24,14 @@ Progress: [=============] 100% (13/14 total plans across v1.0+v1.1)
 - Total execution time: 22min
 
 **v1.1 Stats:**
-- Plans completed: 6
+- Plans completed: 7
 - 04-01: 2min
 - 04-02: 2min
 - 04.1-01: 2min
 - 05-01: 2min
 - 06-01: 3min
 - 06-02: 2min
+- 06-03: 4min
 
 ## Accumulated Context
 
@@ -63,6 +64,9 @@ New v1.1 decisions:
 - [06-02]: Buyer cards use blue/teal gradient (#e8f4f8 to #d0eef6) visually distinct from Act 1 white cards
 - [06-02]: Difficulty ramp via margins (50-120% to 5-30%) not speed; bad offer rate 15% to 50%
 - [06-02]: Swipe direction detection: 30px minimum, horizontal > 0.8x vertical for filtering
+- [06-03]: Act 2 spawn interval lerps from 1.5s to 0.8s based on normalized time
+- [06-03]: endGame calculates finalProfit = act2Revenue - act1Spending (unsold is informational display only)
+- [06-03]: getRating thresholds: 100/40/0/-50 EUR for 5/4/3/2 stars
 
 ### Roadmap Evolution
 
@@ -79,5 +83,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 06-02-PLAN.md (Buyer Card Primitives)
+Stopped at: Completed 06-03-PLAN.md (Act 2 Game Loop and Game Over)
 Resume file: None
