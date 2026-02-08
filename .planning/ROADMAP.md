@@ -3,7 +3,7 @@
 ## Milestones
 
 - v1.0 MVP - Phases 1-3 (shipped 2026-02-07)
-- v1.1 Vinted Cards & Buy/Sell - Phases 4-6 (in progress)
+- v1.1 Vinted Cards & Buy/Sell - Phases 4-6 (shipped 2026-02-08)
 
 ## Phases
 
@@ -70,14 +70,14 @@ Plans:
 
 </details>
 
-### v1.1 Vinted Cards & Buy/Sell (In Progress)
+### v1.1 Vinted Cards & Buy/Sell (SHIPPED 2026-02-08)
 
 **Milestone Goal:** Redesign watches as Vinted listing cards for readability, add a two-act buy/sell game mechanic, and bring sound effects to the game feel.
 
 - [x] **Phase 4: Vinted Cards** - Watches become readable Vinted-style listing cards with proper split animation
 - [x] **Phase 4.1: Dynamics Tuning** - Tune card flight speed, arcs, and rotation for comfortable brand readability
 - [x] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
-- [ ] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
+- [x] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
 
 ## Phase Details
 

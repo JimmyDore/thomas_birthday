@@ -59,14 +59,14 @@
 
 ### Buy/Sell Mechanic
 
-- [ ] **MECH-01**: Act 1 "Les Achats" -- player slashes cards to buy watches, avoiding fakes
-- [ ] **MECH-02**: Inventory system tracks watches purchased during Act 1
-- [ ] **MECH-03**: Transition screen between Act 1 and Act 2 showing inventory summary
-- [ ] **MECH-04**: Act 2 "La Revente" -- buyer offer cards fly in, player slashes to accept deals
-- [ ] **MECH-05**: Offer prices vary from lowball to great deals -- player judges which to accept
-- [ ] **MECH-06**: Act 2 difficulty ramp -- offers get trickier over time
-- [ ] **MECH-07**: Final score combines profit from both acts
-- [ ] **MECH-08**: Vinted seller rating updated to reflect two-act performance
+- [x] **MECH-01**: Act 1 "Les Achats" -- player slashes cards to buy watches, avoiding fakes
+- [x] **MECH-02**: Inventory system tracks watches purchased during Act 1
+- [x] **MECH-03**: Transition screen between Act 1 and Act 2 showing inventory summary
+- [x] **MECH-04**: Act 2 "La Revente" -- buyer offer cards fly in, player slashes to accept deals
+- [x] **MECH-05**: Offer prices vary from lowball to great deals -- player judges which to accept
+- [x] **MECH-06**: Act 2 difficulty ramp -- offers get trickier over time
+- [x] **MECH-07**: Final score combines profit from both acts
+- [x] **MECH-08**: Vinted seller rating updated to reflect two-act performance
 
 ### Sound Effects
 
@@ -146,20 +146,20 @@
 | SFX-04 | Phase 5 | Complete |
 | SFX-05 | Phase 5 | Complete |
 | SFX-06 | Phase 5 | Complete |
-| MECH-01 | Phase 6 | Pending |
-| MECH-02 | Phase 6 | Pending |
-| MECH-03 | Phase 6 | Pending |
-| MECH-04 | Phase 6 | Pending |
-| MECH-05 | Phase 6 | Pending |
-| MECH-06 | Phase 6 | Pending |
-| MECH-07 | Phase 6 | Pending |
-| MECH-08 | Phase 6 | Pending |
+| MECH-01 | Phase 6 | Complete |
+| MECH-02 | Phase 6 | Complete |
+| MECH-03 | Phase 6 | Complete |
+| MECH-04 | Phase 6 | Complete |
+| MECH-05 | Phase 6 | Complete |
+| MECH-06 | Phase 6 | Complete |
+| MECH-07 | Phase 6 | Complete |
+| MECH-08 | Phase 6 | Complete |
 
 **Coverage:**
 - v1.0 requirements: 23/23 mapped (all complete)
-- v1.1 requirements: 20/20 mapped
+- v1.1 requirements: 20/20 mapped (all complete)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-08 after v1.1 roadmap creation*
+*Last updated: 2026-02-08 after v1.1 milestone completion*
