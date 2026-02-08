@@ -78,6 +78,7 @@ Plans:
 - [x] **Phase 4.1: Dynamics Tuning** - Tune card flight speed, arcs, and rotation for comfortable brand readability
 - [x] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
 - [x] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
+- [ ] **Phase 7: Fix Price Consistency** - Make display prices the real costs, fix Act 1/Act 2 price mismatch, rescale Act 2 offers
 
 ## Phase Details
 
@@ -140,6 +141,20 @@ Plans:
 - [x] 06-02-PLAN.md -- Act 2 primitives: buyer card rendering, offer generation, swipe direction, accept/reject handlers
 - [x] 06-03-PLAN.md -- Act 2 game loop, trail color, game over redesign, full gameplay verification
 
+### Phase 7: Fix Price Consistency
+**Goal**: Display prices on Act 1 cards become the actual purchase costs, so Act 2 buyer cards and the transition screen show coherent numbers that match what the player saw in Act 1
+**Depends on**: Phase 6 (buy/sell mechanic complete)
+**Success Criteria** (what must be TRUE):
+  1. The price shown on an Act 1 card (e.g. "47 EUR") is the actual cost stored in inventory and used for Act 2 profit calculations
+  2. The transition screen "Dépense totale" matches the sum of displayed item prices in the inventory list
+  3. Act 2 buyer cards show "Payé: X EUR" where X matches what the player saw on the Act 1 card
+  4. Act 2 offer prices are scaled to make sense against realistic purchase costs (not always 6-21 EUR range)
+  5. Combo multiplier is properly reflected in inventory cost (applied before addToInventory, not after)
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
+
 ## Progress
 
 **Execution Order:** Phases execute in numeric order: 4 -> 4.1 -> 5 -> 6
@@ -154,3 +169,4 @@ Plans:
 | 4.1 Dynamics Tuning | v1.1 | 1/1 | Complete | 2026-02-08 |
 | 5. Sound Effects | v1.1 | 1/1 | Complete | 2026-02-08 |
 | 6. Buy/Sell Mechanic | v1.1 | 3/3 | Complete | 2026-02-08 |
+| 7. Fix Price Consistency | v1.1 | 0/0 | Not started | - |

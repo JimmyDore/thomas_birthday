@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Milestone v1.1 -- Phase 6: Buy/Sell Mechanic
+**Current focus:** Milestone v1.1 -- Phase 7: Fix Price Consistency
 
 ## Current Position
 
-Phase: 6 of 6 (Buy/Sell Mechanic)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed quick task 001: Remove color hints, show both prices
+Phase: 7 of 7 (Fix Price Consistency)
+Plan: 0 of 0 in current phase
+Status: Not started
+Last activity: 2026-02-08 -- Added Phase 7 to fix price mismatch between Act 1 and Act 2
 
-Progress: [==============] 100% (14/14 total plans across v1.0+v1.1)
+Progress: [==============] 93% (14/15 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ New v1.1 decisions:
 ### Roadmap Evolution
 
 - Phase 4.1 inserted after Phase 4: Dynamics tuning -- card flight speed too fast for comfortable brand reading (URGENT)
+- Phase 7 added: Fix price consistency -- display prices are cosmetic and disconnect from Act 2 costs (Playwright testing revealed)
 
 ### Pending Todos
 
