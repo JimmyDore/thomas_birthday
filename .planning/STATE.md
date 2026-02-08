@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Milestone v1.1 -- Phase 5: Sound Effects
+**Current focus:** Milestone v1.1 -- Phase 6: Buy/Sell Mechanic
 
 ## Current Position
 
-Phase: 5 of 6 (Sound Effects)
-Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed 05-01-PLAN.md
+Phase: 6 of 6 (Buy/Sell Mechanic)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 06-01-PLAN.md
 
-Progress: [==========░] 92% (11/12 total plans across v1.0+v1.1)
+Progress: [============] 100% (12/12 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -24,11 +24,12 @@ Progress: [==========░] 92% (11/12 total plans across v1.0+v1.1)
 - Total execution time: 22min
 
 **v1.1 Stats:**
-- Plans completed: 4
+- Plans completed: 5
 - 04-01: 2min
 - 04-02: 2min
 - 04.1-01: 2min
 - 05-01: 2min
+- 06-01: 3min
 
 ## Accumulated Context
 
@@ -55,6 +56,9 @@ New v1.1 decisions:
 - [04.1-01]: Spawn floor raised 0.3s->0.5s to prevent visual clutter with slower cards
 - [05-01]: SoundEngine IIFE owns single AudioContext + pre-generated noise buffer
 - [05-01]: Combo pitch escalation via semitone multiplier, capped at 12 steps
+- [06-01]: Five-state machine with explicit state names (no enum, just string comparison)
+- [06-01]: Inventory cost captured BEFORE combo multiplier is applied (uses raw watch.value)
+- [06-01]: Transition screen shows max 7 items with "... et N autre(s)" overflow
 
 ### Roadmap Evolution
 
@@ -71,5 +75,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 05-01-PLAN.md (Sound Effects)
+Stopped at: Completed 06-01-PLAN.md (State Machine and Transition)
 Resume file: None
