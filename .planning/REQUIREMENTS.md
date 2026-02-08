@@ -3,7 +3,7 @@
 **Defined:** 2026-02-07
 **Core Value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
 
-## v1 Requirements
+## v1.0 Requirements (Complete)
 
 ### Core Gameplay
 
@@ -35,10 +35,10 @@
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Static site hosted on VPS at roi-du-vinted.jimmydore.fr
-- [ ] **INFRA-02**: Docker container with nginx serving the game
-- [ ] **INFRA-03**: GitHub Actions CI/CD — auto-deploy on push to main
-- [ ] **INFRA-04**: SSL certificate and nginx configuration on VPS
+- [x] **INFRA-01**: Static site hosted on VPS at coupe-des-montres.jimmydore.fr
+- [x] **INFRA-02**: nginx serving the game
+- [x] **INFRA-03**: GitHub Actions CI/CD — auto-deploy on push to master
+- [x] **INFRA-04**: SSL certificate and nginx configuration on VPS
 
 ### Platform
 
@@ -46,15 +46,45 @@
 - [x] **PLAT-02**: Entire UI in French
 - [x] **PLAT-03**: No install needed — plays in browser
 
-## v2 Requirements
+## v1.1 Requirements
 
-### Nice-to-Have
+### Vinted Card Visuals
 
-- **V2-01**: Sound effects (slash sound, coin sound on good buy)
-- **V2-02**: High score persistence (localStorage)
+- [ ] **CARD-01**: Watches displayed as white rounded Vinted-style listing cards
+- [ ] **CARD-02**: Brand name rendered clearly below watch illustration (14-16px bold on white background)
+- [ ] **CARD-03**: Cards fly and rotate using existing physics system
+- [ ] **CARD-04**: Slashed cards split into two tumbling halves
+- [ ] **CARD-05**: Fake cards look identical to real ones except for brand spelling
+- [ ] **CARD-06**: Golden card variant for jackpot watches
+
+### Buy/Sell Mechanic
+
+- [ ] **MECH-01**: Act 1 "Les Achats" — player slashes cards to buy watches, avoiding fakes
+- [ ] **MECH-02**: Inventory system tracks watches purchased during Act 1
+- [ ] **MECH-03**: Transition screen between Act 1 and Act 2 showing inventory summary
+- [ ] **MECH-04**: Act 2 "La Revente" — buyer offer cards fly in, player slashes to accept deals
+- [ ] **MECH-05**: Offer prices vary from lowball to great deals — player judges which to accept
+- [ ] **MECH-06**: Act 2 difficulty ramp — offers get trickier over time
+- [ ] **MECH-07**: Final score combines profit from both acts
+- [ ] **MECH-08**: Vinted seller rating updated to reflect two-act performance
+
+### Sound Effects
+
+- [ ] **SFX-01**: Slash swoosh sound on swipe
+- [ ] **SFX-02**: Impact sound on successful card hit
+- [ ] **SFX-03**: Coin/cha-ching sound on good deal
+- [ ] **SFX-04**: Penalty buzz sound on fake/bad deal
+- [ ] **SFX-05**: Jackpot sound for golden watches
+- [ ] **SFX-06**: All sounds generated via Web Audio API procedural synthesis (no audio files)
+
+## Future Requirements
+
+### Deferred to v2
+
 - **V2-03**: Share score button
 - **V2-04**: More watch brands and special items
-- **V2-05**: Combo multiplier for consecutive good slashes
+- Heart icon on Vinted cards — visual polish
+- Price tag on Vinted cards — visual polish
 
 ## Out of Scope
 
@@ -64,13 +94,15 @@
 | Multiplayer | Single player birthday joke |
 | Backend/API | Fully static client-side game |
 | Desktop optimization | Mobile-only, Chrome on phone |
-| Game framework (Phaser, PixiJS) | Overkill for a simple arcade game — vanilla JS + Canvas |
-| Build tooling (webpack, vite) | Unnecessary complexity for static files |
-| Multiple game modes | One mode is enough for a joke game |
+| Game framework (Phaser, PixiJS) | Overkill — vanilla JS + Canvas |
+| Build tooling (webpack, vite) | Unnecessary complexity |
+| Pre-recorded audio files | Procedural synthesis keeps zero-dependency constraint |
 | Tutorial/onboarding | Fruit Ninja is universally understood |
-| Leaderboard | Single player, no persistence needed |
+| Leaderboard | Single player, localStorage sufficient |
 
 ## Traceability
+
+### v1.0 (Complete)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -90,19 +122,45 @@
 | PERS-02 | Phase 2 | Complete |
 | FEEL-01 | Phase 1 | Complete |
 | FEEL-02 | Phase 1 | Complete |
-| INFRA-01 | Phase 3 | Pending |
-| INFRA-02 | Phase 3 | Pending |
-| INFRA-03 | Phase 3 | Pending |
-| INFRA-04 | Phase 3 | Pending |
+| INFRA-01 | Phase 3 | Complete |
+| INFRA-02 | Phase 3 | Complete |
+| INFRA-03 | Phase 3 | Complete |
+| INFRA-04 | Phase 3 | Complete |
 | PLAT-01 | Phase 1 | Complete |
 | PLAT-02 | Phase 1 | Complete |
 | PLAT-03 | Phase 1 | Complete |
 
+### v1.1 (Pending — mapped during roadmap creation)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CARD-01 | — | Pending |
+| CARD-02 | — | Pending |
+| CARD-03 | — | Pending |
+| CARD-04 | — | Pending |
+| CARD-05 | — | Pending |
+| CARD-06 | — | Pending |
+| MECH-01 | — | Pending |
+| MECH-02 | — | Pending |
+| MECH-03 | — | Pending |
+| MECH-04 | — | Pending |
+| MECH-05 | — | Pending |
+| MECH-06 | — | Pending |
+| MECH-07 | — | Pending |
+| MECH-08 | — | Pending |
+| SFX-01 | — | Pending |
+| SFX-02 | — | Pending |
+| SFX-03 | — | Pending |
+| SFX-04 | — | Pending |
+| SFX-05 | — | Pending |
+| SFX-06 | — | Pending |
+
 **Coverage:**
-- v1 requirements: 23 total
-- Mapped to phases: 23
-- Unmapped: 0
+- v1.0 requirements: 23 total (all complete)
+- v1.1 requirements: 20 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 20
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after roadmap creation*
+*Last updated: 2026-02-08 after v1.1 milestone requirements*
