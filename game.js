@@ -1384,23 +1384,38 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function renderTimer() {
   var remaining = Math.max(0, Math.ceil(ROUND_DURATION - elapsed));
+  renderTimerValue(remaining);
+}
+
+function renderTimerValue(remaining) {
   var isWarning = remaining <= 10;
   var isFinal = remaining <= 3;
+  var fontSize = 28;
+
+  if (isFinal && remaining > 0) {
+    var totalDur = (gameState === 'act2') ? ACT2_DURATION : ROUND_DURATION;
+    var el = (gameState === 'act2') ? act2Elapsed : elapsed;
+    var frac = (totalDur - el) % 1;
+    fontSize = Math.round(28 * (1 + (1 - frac) * 0.3));
+  } else if (isWarning) {
+    fontSize = 32;
+  }
+
+  ctx.font = 'bold ' + fontSize + 'px sans-serif';
+  var timerText = remaining.toString() + 's';
+  var timerW = ctx.measureText(timerText).width;
+  var pillW = timerW + 20;
+
+  // Timer pill centered at top
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.beginPath();
+  roundRect(ctx, canvasWidth / 2 - pillW / 2, 10, pillW, 36, 8);
+  ctx.fill();
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-
-  if (isFinal && remaining > 0) {
-    // Pulse effect: scale based on fractional second
-    var frac = (ROUND_DURATION - elapsed) % 1;
-    var scale = 1 + (1 - frac) * 0.3; // pulse from 1.3x down to 1.0x
-    ctx.font = 'bold ' + Math.round(28 * scale) + 'px sans-serif';
-  } else {
-    ctx.font = 'bold ' + (isWarning ? 32 : 28) + 'px sans-serif';
-  }
-
   ctx.fillStyle = isWarning ? '#ff4444' : '#ffffff';
-  ctx.fillText(remaining.toString(), canvasWidth / 2, 28);
+  ctx.fillText(timerText, canvasWidth / 2, 28);
 }
 
 // --- Combo Display ---
@@ -2006,23 +2021,9 @@ function renderAct2(dt) {
   ctx.textAlign = 'left';
   ctx.fillText(unsoldCount + ' montre(s) a vendre', 14, 80);
 
-  // Timer (same position as Act 1)
+  // Timer (reuse shared renderer)
   var remaining = Math.max(0, Math.ceil(ACT2_DURATION - act2Elapsed));
-  var isWarning = remaining <= 10;
-  var isFinal = remaining <= 3;
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  if (isFinal && remaining > 0) {
-    var frac = (ACT2_DURATION - act2Elapsed) % 1;
-    var scale = 1 + (1 - frac) * 0.3;
-    ctx.font = 'bold ' + Math.round(28 * scale) + 'px sans-serif';
-  } else {
-    ctx.font = 'bold ' + (isWarning ? 32 : 28) + 'px sans-serif';
-  }
-  ctx.fillStyle = isWarning ? '#ff4444' : '#ffffff';
-  ctx.fillText(remaining.toString(), canvasWidth / 2, 28);
+  renderTimerValue(remaining);
 
   // Vinted rating (top right)
   renderRating();
