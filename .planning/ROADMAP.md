@@ -90,11 +90,11 @@ Plans:
   3. Fake cards are visually identical to real cards -- only the brand spelling reveals the difference
   4. Golden jackpot cards are visually distinct (gold color treatment) and still trigger the jackpot bonus
   5. Cards fly, rotate, and respond to the existing physics system without framerate drops or visual glitches on mobile
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- Card rendering system: drawCardToCanvas, drawWatchIcon, createCardSprite, drawCard (replace 3 watch styles)
+- [ ] 04-02-PLAN.md -- Integration: wire cards into spawning, collision, split halves, decorative watches, and verify
 
 ### Phase 5: Sound Effects
 **Goal**: Every slash, coin gain, and penalty has audio feedback that makes the game feel alive, using procedural synthesis with no audio files
