@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 4 of 6 (Vinted Cards)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 04-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 04-02-PLAN.md
 
-Progress: [========░░] 80% (8/10 total plans across v1.0+v1.1)
+Progress: [=========░] 90% (9/10 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -24,8 +24,9 @@ Progress: [========░░] 80% (8/10 total plans across v1.0+v1.1)
 - Total execution time: 22min
 
 **v1.1 Stats:**
-- Plans completed: 1
+- Plans completed: 2
 - 04-01: 2min
+- 04-02: 2min
 
 ## Accumulated Context
 
@@ -47,6 +48,7 @@ New v1.1 decisions:
 - [04-01]: Offscreen canvas sprite caching -- shadowBlur only at spawn, not per frame
 - [04-01]: Single drawCardToCanvas handles both white and golden cards via isGolden flag
 - [04-01]: Cards carry decorative price property (10-99 EUR normal, 200-499 EUR golden)
+- [04-02]: All fakes visually identical to reals -- readability and fake detection relies on brand text spelling
 
 ### Pending Todos
 
@@ -54,10 +56,10 @@ None.
 
 ### Blockers/Concerns
 
-None.
+- [04-02]: Card flight speed too fast for comfortable brand name reading -- needs dedicated dynamics tuning phase for polish
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 04-01-PLAN.md
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
