@@ -75,6 +75,7 @@ Plans:
 **Milestone Goal:** Redesign watches as Vinted listing cards for readability, add a two-act buy/sell game mechanic, and bring sound effects to the game feel.
 
 - [x] **Phase 4: Vinted Cards** - Watches become readable Vinted-style listing cards with proper split animation
+- [ ] **Phase 4.1: Dynamics Tuning** - Tune card flight speed, arcs, and rotation for comfortable brand readability
 - [ ] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
 - [ ] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
 
@@ -96,9 +97,21 @@ Plans:
 - [x] 04-01-PLAN.md -- Card rendering system: drawCardToCanvas, drawWatchIcon, createCardSprite, drawCard (replace 3 watch styles)
 - [x] 04-02-PLAN.md -- Integration: wire cards into spawning, collision, split halves, decorative watches, and verify
 
+### Phase 4.1: Dynamics Tuning (INSERTED)
+**Goal**: Cards fly slowly enough that brand names are comfortably readable on mobile, with tuned launch speeds, arc heights, and rotation rates that balance readability with satisfying gameplay feel
+**Depends on**: Phase 4 (cards render correctly)
+**Success Criteria** (what must be TRUE):
+  1. Brand names on cards are comfortably readable during flight on mobile -- no squinting or lucky timing needed
+  2. Cards still feel satisfying to slash -- not floaty or boring despite slower speeds
+  3. Difficulty ramp still works -- later spawns feel harder than early spawns
+**Plans**: 1 plan
+
+Plans:
+- [ ] 04.1-01-PLAN.md -- Tune 6 physics parameters (gravity, velocity, speed ramp, spawn rate) for readable card flight
+
 ### Phase 5: Sound Effects
 **Goal**: Every slash, coin gain, and penalty has audio feedback that makes the game feel alive, using procedural synthesis with no audio files
-**Depends on**: Phase 4 (cards render correctly for audio-visual pairing)
+**Depends on**: Phase 4.1 (cards tuned for readability)
 **Requirements**: SFX-01, SFX-02, SFX-03, SFX-04, SFX-05, SFX-06
 **Success Criteria** (what must be TRUE):
   1. Swiping produces an audible swoosh sound on every swipe, and hitting a card adds a distinct impact sound
@@ -128,7 +141,7 @@ Plans:
 
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 4 -> 5 -> 6
+**Execution Order:** Phases execute in numeric order: 4 -> 4.1 -> 5 -> 6
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -137,5 +150,6 @@ Plans:
 | 2.1 Gameplay Polish | v1.0 | 1/1 | Complete | 2026-02-07 |
 | 3. Ship It | v1.0 | 2/2 | Complete | 2026-02-07 |
 | 4. Vinted Cards | v1.1 | 2/2 | Complete | 2026-02-08 |
+| 4.1 Dynamics Tuning | v1.1 | 0/1 | Not started | - |
 | 5. Sound Effects | v1.1 | 0/1 | Not started | - |
 | 6. Buy/Sell Mechanic | v1.1 | 0/2 | Not started | - |
