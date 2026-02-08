@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 Phase: 6 of 6 (Buy/Sell Mechanic)
 Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-02-08 -- Completed 06-03-PLAN.md
+Last activity: 2026-02-08 -- Completed quick task 001: Remove color hints, show both prices
 
 Progress: [==============] 100% (14/14 total plans across v1.0+v1.1)
 
@@ -79,6 +79,12 @@ None.
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Remove color hints, show both prices on buyer cards | 2026-02-08 | de82d73 | [001-remove-color-hints-show-both-prices](./quick/001-remove-color-hints-show-both-prices/) |
 
 ## Session Continuity
 
