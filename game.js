@@ -435,10 +435,11 @@ function spawnWatch(diff) {
     : 'Montignac';
 
   var watchSize = isGolden ? WATCH_SIZE * 1.2 : WATCH_SIZE;
-  var watchValue = isGolden ? 50 : (isFake ? -15 : 10);
   var cardW = isGolden ? CARD_WIDTH * 1.2 : CARD_WIDTH;
   var cardH = isGolden ? CARD_HEIGHT * 1.2 : CARD_HEIGHT;
   var price = isGolden ? (200 + Math.floor(Math.random() * 300)) : (10 + Math.floor(Math.random() * 90));
+  // value derived from price: positive for reals/golden, negative for fakes
+  var watchValue = isFake ? -price : price;
 
   var watch = {
     x: x,
@@ -737,13 +738,13 @@ function rejectOffer(offerCard) {
 
 // --- Slash Handler ---
 
-function addToInventory(watch) {
+function addToInventory(watch, purchaseCost) {
   inventory.push({
     brand: watch.brand,
     price: watch.price,
     isFake: watch.isFake,
     isGolden: watch.isGolden,
-    cost: Math.abs(watch.value),
+    cost: purchaseCost,
     sold: false,
     soldFor: 0,
     offerPending: false
@@ -754,23 +755,25 @@ function slashWatch(watch, slashAngle) {
   // Mark immediately to prevent double-detection (Pitfall 5)
   watch.slashed = true;
 
-  // Inventory recording for Act 1
-  if (gameState === 'act1') {
-    addToInventory(watch);
-    act1Spending += Math.abs(watch.value);
-  }
-
   // Combo system: real watches build combo, fakes reset it
+  // Compute combo BEFORE inventory recording so discount applies to cost
   if (!watch.isFake) {
     combo++;
     comboMultiplier = getMultiplier(combo);
     comboDisplayScale = 1.3; // brief pop animation
     stats.maxCombo = Math.max(stats.maxCombo, combo);
-    // Apply combo multiplier to value
-    watch.value = watch.value * comboMultiplier;
   } else {
     combo = 0;
     comboMultiplier = 1;
+  }
+
+  // Calculate purchase cost: combo gives a discount on real watches
+  var purchaseCost = watch.isFake ? watch.price : Math.round(watch.price / comboMultiplier);
+
+  // Inventory recording for Act 1
+  if (gameState === 'act1') {
+    addToInventory(watch, purchaseCost);
+    act1Spending += purchaseCost;
   }
 
   // Stats tracking
@@ -781,8 +784,8 @@ function slashWatch(watch, slashAngle) {
     if (watch.isGolden) stats.goldenSlashed++;
   }
 
-  // Update score
-  score += watch.value;
+  // Update score: fakes are a loss, reals are spending (positive cost)
+  score += watch.isFake ? -purchaseCost : purchaseCost;
 
   // Create split halves
   var halves = createSplitHalves(watch, slashAngle);
@@ -1520,7 +1523,7 @@ function renderTransition(dt) {
       } else {
         ctx.fillStyle = '#ffffff';
       }
-      ctx.fillText(item.brand + ' - ' + item.price + ' EUR', cx, listStartY + i * lineSpacing);
+      ctx.fillText(item.brand + ' - ' + item.cost + ' EUR', cx, listStartY + i * lineSpacing);
     }
 
     if (inventory.length > maxVisible) {
