@@ -133,11 +133,11 @@ Plans:
   3. Act 2 plays as "La Revente" -- buyer offer cards fly in with varying prices, and the player slashes to accept deals (good offers = profit, lowball offers = penalty)
   4. Act 2 gets trickier over time -- offers become harder to evaluate as the selling phase progresses
   5. The game over screen shows the combined profit from both acts and a Vinted seller rating reflecting two-act performance
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md -- State machine refactor, inventory system, Act 1 HUD reframing, transition screen
+- [ ] 06-02-PLAN.md -- Act 2 buyer offer cards, directional swipe accept/reject, game over redesign
 
 ## Progress
 
