@@ -28,6 +28,8 @@ var act2Revenue = 0;       // Total EUR earned in Act 2
 var ACT2_DURATION = 45;    // seconds
 var act2Elapsed = 0;
 var currentOfferIndex = 0; // Round-robin index for buyer offers
+var act2SpawnTimer = 0;    // Spawn timer for Act 2 buyer offers
+var allSoldEarly = false;  // True if all inventory sold before timer ran out
 
 // --- High Score Persistence ---
 var STORAGE_KEY = 'watchNinja_bestScore';
@@ -473,8 +475,13 @@ function updateWatches(dt) {
 
     // Off-screen cleanup: fell below bottom
     if (w.y > canvasHeight + 100 && w.vy > 0) {
-      // Missed penalty: real Montignac not slashed (Act 1 only)
-      if (!w.slashed && !w.isFake && gameState === 'act1') {
+      if (w.isBuyerOffer) {
+        // Buyer offer fell off -- release inventory item for future offers
+        if (!w.slashed && w.targetIndex >= 0 && w.targetIndex < inventory.length) {
+          inventory[w.targetIndex].offerPending = false;
+        }
+      } else if (!w.slashed && !w.isFake && gameState === 'act1') {
+        // Missed penalty: real Montignac not slashed (Act 1 only)
         score -= 8;
         combo = 0;
         comboMultiplier = 1;
@@ -486,8 +493,13 @@ function updateWatches(dt) {
 
     // Off-screen cleanup: too far left or right
     if (w.x < -200 || w.x > canvasWidth + 200) {
-      // Also penalize if real and unslashed (Act 1 only)
-      if (!w.slashed && !w.isFake && gameState === 'act1') {
+      if (w.isBuyerOffer) {
+        // Buyer offer flew off -- release inventory item for future offers
+        if (!w.slashed && w.targetIndex >= 0 && w.targetIndex < inventory.length) {
+          inventory[w.targetIndex].offerPending = false;
+        }
+      } else if (!w.slashed && !w.isFake && gameState === 'act1') {
+        // Also penalize if real and unslashed (Act 1 only)
         score -= 8;
         combo = 0;
         comboMultiplier = 1;
@@ -1283,6 +1295,17 @@ function renderTrail() {
   var now = performance.now();
   ctx.lineCap = 'round';
 
+  // Act 2 trail color: green for right swipe, red for left swipe
+  var trailColor = TRAIL_COLOR;
+  if (gameState === 'act2' && trailPoints.length >= 3) {
+    var dir = getSwipeDirection(trailPoints);
+    if (dir === 'right') {
+      trailColor = '100, 220, 100';
+    } else if (dir === 'left') {
+      trailColor = '220, 100, 100';
+    }
+  }
+
   for (var i = 1; i < trailPoints.length; i++) {
     var p0 = trailPoints[i - 1];
     var p1 = trailPoints[i];
@@ -1295,7 +1318,7 @@ function renderTrail() {
     var widthRatio = i / trailPoints.length;
     ctx.lineWidth = 3 + widthRatio * 5;
 
-    ctx.strokeStyle = 'rgba(' + TRAIL_COLOR + ', ' + alpha + ')';
+    ctx.strokeStyle = 'rgba(' + trailColor + ', ' + alpha + ')';
     ctx.beginPath();
     ctx.moveTo(p0.x, p0.y);
     ctx.lineTo(p1.x, p1.y);
@@ -1825,6 +1848,8 @@ function resetGame() {
   act2Revenue = 0;
   act2Elapsed = 0;
   currentOfferIndex = 0;
+  act2SpawnTimer = 0;
+  allSoldEarly = false;
 }
 
 // --- Game Loop ---
@@ -1878,6 +1903,133 @@ function renderAct1(dt) {
   renderAct1HUD();
 }
 
+// --- Act 2 Game Loop ---
+
+function updateAct2(dt) {
+  updateTrail();
+
+  // Timer
+  act2Elapsed += dt;
+
+  // Check end conditions: timer expired or all inventory sold
+  var allSold = inventory.length > 0 && inventory.every(function(item) { return item.sold; });
+  if (act2Elapsed >= ACT2_DURATION || allSold) {
+    endGame();
+    return;
+  }
+
+  // Spawn buyer offers with difficulty-ramped interval
+  var t = act2Elapsed / ACT2_DURATION;
+  var spawnInterval = 1.5 - t * 0.7; // lerp from 1.5s (t=0) to 0.8s (t=1)
+  act2SpawnTimer += dt;
+  if (act2SpawnTimer >= spawnInterval) {
+    act2SpawnTimer -= spawnInterval;
+    var idx = findNextUnsoldItem();
+    if (idx !== -1) {
+      var offer = createBuyerOffer(inventory[idx], idx, t);
+      watches.push(offer);
+    }
+  }
+
+  // Collision detection (directional swipe accept/reject)
+  checkAct2Collisions();
+
+  updateWatches(dt);
+  updateSplitHalves(dt);
+  updateParticles(dt);
+  updateFloatingTexts(dt);
+}
+
+function renderAct2(dt) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  renderBackground();
+
+  // Draw buyer offer cards
+  for (var i = 0; i < watches.length; i++) {
+    drawWatch(ctx, watches[i]);
+  }
+
+  renderTrail();
+  renderSplitHalves();
+  renderParticles();
+  renderFloatingTexts();
+
+  // Act 2 HUD: header
+  ctx.save();
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Acte 2 : La Revente', canvasWidth / 2, 55);
+  ctx.restore();
+
+  // Revenue display (replaces score pill for Act 2)
+  var revenueText = 'Recettes: ' + act2Revenue + ' EUR';
+  ctx.font = 'bold 20px sans-serif';
+  var textW = ctx.measureText(revenueText).width;
+  var pillW = Math.max(80, textW + 24);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.beginPath();
+  roundRect(ctx, 10, 10, pillW, 36, 8);
+  ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(revenueText, 10 + pillW / 2, 28);
+
+  // Unsold count
+  var unsoldCount = 0;
+  for (var j = 0; j < inventory.length; j++) {
+    if (!inventory[j].sold) unsoldCount++;
+  }
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.textAlign = 'left';
+  ctx.fillText(unsoldCount + ' montre(s) a vendre', 14, 80);
+
+  // Timer (same position as Act 1)
+  var remaining = Math.max(0, Math.ceil(ACT2_DURATION - act2Elapsed));
+  var isWarning = remaining <= 10;
+  var isFinal = remaining <= 3;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (isFinal && remaining > 0) {
+    var frac = (ACT2_DURATION - act2Elapsed) % 1;
+    var scale = 1 + (1 - frac) * 0.3;
+    ctx.font = 'bold ' + Math.round(28 * scale) + 'px sans-serif';
+  } else {
+    ctx.font = 'bold ' + (isWarning ? 32 : 28) + 'px sans-serif';
+  }
+  ctx.fillStyle = isWarning ? '#ff4444' : '#ffffff';
+  ctx.fillText(remaining.toString(), canvasWidth / 2, 28);
+
+  // Vinted rating (top right)
+  renderRating();
+}
+
+// --- End Game ---
+
+function endGame() {
+  // Calculate final breakdown from inventory
+  var unsoldLoss = 0;
+  for (var i = 0; i < inventory.length; i++) {
+    if (!inventory[i].sold) unsoldLoss += inventory[i].cost;
+  }
+
+  var finalProfit = act2Revenue - act1Spending;
+
+  // Set score for rating calculation and best score
+  score = finalProfit;
+  isNewBest = saveBestScore(score);
+
+  // Check if all inventory was sold early
+  allSoldEarly = inventory.length > 0 && inventory.every(function(item) { return item.sold; });
+
+  gameState = 'over';
+}
+
 function gameLoop(timestamp) {
   if (paused) return;
 
@@ -1898,16 +2050,8 @@ function gameLoop(timestamp) {
   } else if (gameState === 'transition') {
     renderTransition(dt);
   } else if (gameState === 'act2') {
-    // Act 2 stub -- Plan 02 fills this in
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    renderBackground();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px sans-serif';
-    ctx.fillText('Acte 2 : Les Ventes', canvasWidth / 2, canvasHeight / 2 - 20);
-    ctx.font = '16px sans-serif';
-    ctx.fillText('A venir...', canvasWidth / 2, canvasHeight / 2 + 20);
+    updateAct2(dt);
+    renderAct2(dt);
   } else if (gameState === 'over') {
     renderGameOver();
   }
