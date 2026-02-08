@@ -1184,12 +1184,24 @@ function createBuyerOffer(inventoryItem, inventoryIndex, t) {
   var isGoodDeal;
 
   if (inventoryItem.isGolden) {
-    // Golden watches: premium offers 150-400 EUR
-    offerPrice = 150 + Math.floor(Math.random() * 251);
+    // Golden watches: percentage-margin offers scaled to golden cost (200-499 range)
+    var goldenBadRate = 0.15 + t * 0.35; // same ramp as reals
+    if (Math.random() < goldenBadRate) {
+      // Bad offer: -5% to -30% below cost (golden retains more value)
+      var goldenDiscount = 0.05 + Math.random() * 0.25;
+      offerPrice = Math.max(1, Math.round(inventoryItem.cost * (1 - goldenDiscount)));
+    } else {
+      // Good offer: +10% to +60% early, shrinking to +5% to +20% late
+      var goldenMinMarkup = Math.max(0.05, 0.10 + (1 - t) * 0.00);
+      var goldenMaxMarkup = Math.max(0.20, 0.60 - t * 0.40);
+      goldenMinMarkup = Math.min(goldenMinMarkup, goldenMaxMarkup - 0.05);
+      var goldenMarkup = goldenMinMarkup + Math.random() * (goldenMaxMarkup - goldenMinMarkup);
+      offerPrice = Math.round(inventoryItem.cost * (1 + goldenMarkup));
+    }
     isGoodDeal = offerPrice > inventoryItem.cost;
   } else if (inventoryItem.isFake) {
-    // Fake watches: always low offers, 5-15 EUR
-    offerPrice = 5 + Math.floor(Math.random() * 11);
+    // Fake watches: 20-60% of cost (always a loss since you paid full price)
+    offerPrice = Math.max(1, Math.round(inventoryItem.cost * (0.20 + Math.random() * 0.40)));
     isGoodDeal = offerPrice > inventoryItem.cost;
   } else {
     // Real watches: margin shrinks over Act 2 time
