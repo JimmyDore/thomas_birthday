@@ -1,402 +1,613 @@
-# Architecture Research
+# Architecture: Vinted Cards, Buy/Sell, and Audio Integration
 
-**Domain:** HTML5 Canvas arcade game (Fruit Ninja-style)
-**Researched:** 2026-02-07
-**Confidence:** HIGH
+**Domain:** Extending existing Canvas 2D arcade game with new visuals, multi-phase gameplay, and sound
+**Researched:** 2026-02-08
+**Confidence:** HIGH (existing codebase fully analyzed, Canvas 2D and Web Audio API are stable platforms)
 
-HTML5 Canvas game architecture is a mature, stable domain. The patterns described below have been the standard for 10+ years and are universally used in browser-based 2D games. No external verification needed -- these are fundamental computer science / game development patterns.
+## Executive Summary
 
-## Standard Architecture
+The existing game.js (1381 lines) is a well-structured single-file Canvas 2D game with clean separation of concerns via functions. The three new features (Vinted card rendering, two-act buy/sell state machine, audio) integrate at clearly identifiable points. The card rendering replaces draw functions. The state machine extends the existing string-based state variable with new states and a transition screen. Audio adds a new subsystem that hooks into existing event points (slash, score change, timer). No architectural overhaul is needed; this is additive evolution of a working codebase.
 
-### System Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        GAME SHELL                               │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                      │
-│  │  Splash  │  │  Playing  │  │  Game    │                      │
-│  │  Screen  │→ │  State   │→ │  Over    │                      │
-│  └──────────┘  └──────────┘  └──────────┘                      │
-├─────────────────────────────────────────────────────────────────┤
-│                        GAME LOOP                                │
-│         requestAnimationFrame → update → render → repeat        │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │  Input   │  │  Physics │  │  Game    │  │ Renderer │       │
-│  │  Handler │→ │  Engine  │→ │  Logic   │→ │ (Canvas) │       │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
-├─────────────────────────────────────────────────────────────────┤
-│                        GAME STATE                               │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐                   │
-│  │  Entities │  │  Score /  │  │  Config  │                   │
-│  │  (watches)│  │  Timer   │  │  (tuning)│                   │
-│  └───────────┘  └───────────┘  └───────────┘                   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **Game Loop** | Drives the entire game tick by tick at ~60fps | `requestAnimationFrame` callback with delta-time calculation |
-| **Input Handler** | Captures and normalizes touch/swipe events | `touchstart`/`touchmove`/`touchend` listeners on canvas, stores swipe trail |
-| **Physics Engine** | Moves entities along arcs, applies gravity | Simple Euler integration: `vy += gravity * dt; y += vy * dt` |
-| **Game Logic** | Spawns watches, detects slashes, scores points | Collision detection between swipe trail and entity hitboxes |
-| **Renderer** | Draws everything to the canvas each frame | `ctx.clearRect()` then draw background, entities, effects, UI overlay |
-| **Game State** | Holds all mutable data (entities, score, timer) | Plain JS object or a few top-level variables |
-| **Scene Manager** | Transitions between splash / playing / game-over | State machine with 3 states, each with its own update/render |
-
-## Recommended Project Structure
-
-For a simple birthday joke game with no build tooling, a single-file or minimal-file approach is ideal.
-
-### Option A: Single File (Recommended)
+## Existing Architecture Map
 
 ```
-/
-├── index.html          # Everything: HTML + CSS + JS in one file
-├── Dockerfile          # nginx static serve
-├── nginx.conf          # SSL + domain config
-└── .github/
-    └── workflows/
-        └── deploy.yml  # CI/CD
+game.js (1381 lines) -- Single file, no modules, no build tools
+
+GLOBALS (lines 1-93)
+  Canvas refs, game state string, score, combo, timer, watch constants
+
+PERSISTENCE (lines 29-51)
+  loadBestScore(), saveBestScore() via localStorage
+
+DIFFICULTY (lines 200-211)
+  getDifficulty() returns spawn interval, speed, fake chance based on elapsed time
+
+ENTITY LIFECYCLE (lines 215-300)
+  spawnWatch() -> watches[] flat array -> updateWatches() physics + cleanup
+
+EFFECTS (lines 303-637)
+  floatingTexts[], splitHalves[], particles[] -- each with spawn/update/render
+
+COLLISION (lines 365-411)
+  lineSegmentIntersectsCircle() + checkSlashCollisions() iterates trail x watches
+
+SLASH HANDLER (lines 415-468)
+  slashWatch() -- marks slashed, updates combo/score, creates halves+particles+text
+
+DRAWING (lines 639-895)
+  drawWatch() dispatches to drawRoundWatch/drawSquareWatch/drawSportWatch
+  drawBrandLabel() renders text on dial
+  Each style: band stubs, case shape, cream dial, hour markers, hands, crown, brand
+
+INPUT (lines 146-192)
+  Pointer Events: pointerdown/pointermove/pointerup on canvas
+  State-aware dispatch: start->handleStartTap, playing->trail, over->handleReplayTap
+
+TRAIL (lines 898-930)
+  updateTrail() prunes old points, renderTrail() draws gold segments
+
+HUD (lines 932-1054)
+  renderScore(), renderTimer(), renderCombo(), renderRating()
+
+SCREENS (lines 1056-1271)
+  renderStart() with decorative watches, renderGameOver() with stats+rating+birthday
+
+GAME LOOP (lines 1299-1381)
+  update(dt) -> render(dt) dispatched by gameState string
+  gameLoop() via requestAnimationFrame with delta-time capping at 50ms
 ```
 
-### Option B: Minimal Split (If file gets too long)
+## Integration Analysis
+
+### Feature 1: Vinted Card Rendering
+
+**What changes:** The watch drawing functions become card drawing functions. The entity shape changes from circle to rectangle.
+
+#### Components to REPLACE
+
+| Current | New | Lines Affected |
+|---------|-----|----------------|
+| `drawRoundWatch()` | REMOVE | 669-724 |
+| `drawSquareWatch()` | REMOVE | 727-805 |
+| `drawSportWatch()` | REMOVE | 808-870 |
+| `drawBrandLabel()` | REMOVE (integrated into card) | 873-884 |
+| `drawWatch()` | `drawCard()` -- single function, no style dispatch | 641-666 |
+
+#### Components to MODIFY
+
+| Current | Change | Reason |
+|---------|--------|--------|
+| `WATCH_STYLES` array | REMOVE -- cards have one style | No longer dispatching to 3 draw functions |
+| `spawnWatch()` | Rename to `spawnCard()`, remove style property, add `width`/`height` instead of `size` | Cards are rectangular, not circular |
+| `renderHalf()` | Update clip region for rectangular card | Current clips circle; needs to clip rounded rect |
+| `lineSegmentIntersectsCircle()` | Keep AND add `lineSegmentIntersectsRect()` | Cards need rectangular hitbox |
+| `checkSlashCollisions()` | Use rect-based collision with card dimensions | Currently uses `hitRadius = w.size / 2 * 1.2` |
+
+#### Components UNCHANGED
+
+| Component | Why Unchanged |
+|-----------|---------------|
+| `spawnWatch()` physics (x, y, vx, vy, gravity) | Cards follow same parabolic arcs |
+| `updateWatches()` | Position/velocity update is shape-agnostic |
+| Split halves physics | Same perpendicular push, gravity, fade |
+| Particle system | Particles are independent of entity shape |
+| Trail rendering | Trail is independent of entity shape |
+
+#### Card Rendering Approach
+
+**Canvas 2D card drawing (no images, no external assets):**
 
 ```
-/
-├── index.html          # HTML shell + CSS
-├── game.js             # All game logic
-├── assets/             # Optional: watch images if not drawn with Canvas
-│   ├── montignac.png
-│   └── fake.png
-├── Dockerfile
-├── nginx.conf
-└── .github/
-    └── workflows/
-        └── deploy.yml
+drawCard(ctx, card):
+  ctx.save()
+  ctx.translate(card.x, card.y)
+  ctx.rotate(card.rotation)
+
+  // Drop shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.3)'
+  ctx.shadowBlur = 8
+  ctx.shadowOffsetY = 3
+
+  // White card body (rounded rectangle)
+  ctx.beginPath()
+  ctx.roundRect(-w/2, -h/2, w, h, 8)
+  ctx.fillStyle = '#ffffff'
+  ctx.fill()
+
+  // Reset shadow for inner content
+  ctx.shadowColor = 'transparent'
+
+  // Watch illustration zone (top 60% of card)
+  // Reuse simplified watch drawing (circle + hands) as illustration
+  drawWatchIllustration(ctx, 0, -h*0.1, illustrationSize, card.caseColor)
+
+  // Brand name (bottom 25% -- large, readable)
+  ctx.font = 'bold ' + fontSize + 'px sans-serif'
+  ctx.fillStyle = card.isFake ? '#cc3333' : '#2a7d4f'  // only for non-sneaky
+  ctx.fillText(card.brand, 0, h*0.3)
+
+  // Price tag (small, bottom)
+  ctx.font = '10px sans-serif'
+  ctx.fillText(card.price + ' EUR', 0, h*0.4)
+
+  ctx.restore()
 ```
 
-### Structure Rationale
+**Key design decisions:**
+- Use native `ctx.roundRect()` -- Baseline Widely Available since April 2023, supported in Chrome 99+, Safari 16.4+, Firefox 112+. The existing codebase already has a manual `roundRect()` helper (line 965) as fallback.
+- Use `ctx.shadowColor/shadowBlur/shadowOffsetY` for drop shadow -- native Canvas, no extra draw calls.
+- Card dimensions: width ~80px, height ~110px (portrait card ratio ~0.73). Larger than current 60px diameter watches, which improves readability.
+- Brand name moves from tiny text on watch dial to large text below watch illustration. This is the primary readability fix.
 
-- **Single file:** For a joke game with a 1-week deadline, splitting into modules adds zero value. One file means no module loading, no CORS issues, no build step. Open `index.html` in browser and it works.
-- **Minimal split:** Only if `index.html` exceeds ~500 lines and becomes hard to navigate. A single `game.js` keeps things manageable without over-engineering.
-- **No `src/` folder:** This is not an enterprise app. The game IS the project.
+#### Collision Detection: Circle to Rectangle
 
-## Architectural Patterns
+The current collision uses `lineSegmentIntersectsCircle()`. Cards need rectangle collision.
 
-### Pattern 1: Fixed-Timestep Game Loop with requestAnimationFrame
+**Recommended approach:** Line-segment-to-AABB (Axis-Aligned Bounding Box) test. Since cards rotate, we have two options:
 
-**What:** The heartbeat of the game. `requestAnimationFrame` provides smooth 60fps rendering, while a fixed timestep ensures physics behaves consistently regardless of frame rate.
+**Option A: Oriented Bounding Box (accurate but complex)**
+Transform trail points into card-local coordinates (undo rotation), then test against axis-aligned rect. Mathematically correct for rotated cards.
 
-**When to use:** Every game. This is not optional.
+**Option B: Expanded circle approximation (simple, good enough)**
+Use a circle whose radius is `Math.max(cardWidth, cardHeight) / 2 * 1.1`. Cards are not that much more rectangular than the current circular watches, and the existing 20% generous hitbox makes this work fine for gameplay.
 
-**Trade-offs:** A fixed-timestep loop is slightly more complex than a naive "update with raw delta," but prevents physics bugs where objects tunnel through each other on slow frames. For this simple game, a simpler variable-timestep is acceptable since there is no rigid body collision that would break.
+**Recommendation: Option B.** The game already uses a generous 20% hitbox expansion (line 404: `hitRadius = w.size / 2 * 1.2`). Using `Math.max(card.width, card.height) / 2 * 1.1` as the hit radius keeps the existing circle-based collision code working without modification. The slight inaccuracy at card corners is a gameplay benefit (generous feel), not a bug. Only switch to Option A if playtesting reveals missed slashes on card edges.
 
-**Recommendation for Watch Ninja:** Use a simple variable-timestep loop. The physics (parabolic arcs) is forgiving enough that frame-rate variations will not cause visible bugs.
+#### Split Animation for Cards
 
-**Example:**
+Current split halves use a vertical clip dividing the entity in half:
 ```javascript
-let lastTime = 0;
-
-function gameLoop(timestamp) {
-  const dt = Math.min((timestamp - lastTime) / 1000, 0.05); // cap at 50ms to prevent spiral of death
-  lastTime = timestamp;
-
-  update(dt);
-  render();
-
-  requestAnimationFrame(gameLoop);
+// line 548-552
+if (half.clipSide === 'right') {
+  ctx.rect(0, -large, large, large * 2);
+} else {
+  ctx.rect(-large, -large, large, large * 2);
 }
-
-requestAnimationFrame(gameLoop);
 ```
 
-### Pattern 2: Entity List with Spawn/Despawn
+This works identically for rectangular cards. The clip is a vertical line through the center, which splits any shape cleanly. The `renderHalf()` function calls the full draw function within the clip region. Changing from `drawWatch()` to `drawCard()` inside `renderHalf()` is the only change needed.
 
-**What:** All game objects (watches) live in a flat array. Each frame, the update loop iterates the array, updates positions, and removes off-screen entities. A spawner adds new entities on a timer.
+### Feature 2: Two-Act Buy/Sell State Machine
 
-**When to use:** Any game with multiple similar objects appearing and disappearing.
+**What changes:** The game state expands from 3 states to 6-7 states. A new "inventory" data structure carries items between acts. Act 2 introduces a new entity type (buyer offers) alongside the existing slash mechanic.
 
-**Trade-offs:** Simple and fast for <100 entities. No need for spatial partitioning, ECS frameworks, or object pools at this scale.
+#### Current State Machine
 
-**Example:**
+```
+'start' --> 'playing' --> 'over'
+   ^                        |
+   +------------------------+
+```
+
+Controlled by `var gameState = 'start'` (line 13), dispatched in `gameLoop()` (line 1362-1369) and `setupInput()` (line 153-161).
+
+#### New State Machine
+
+```
+'start' --> 'buying' --> 'buyEnd' --> 'selling' --> 'over'
+   ^                                                  |
+   +--------------------------------------------------+
+```
+
+| State | Purpose | Duration | What Happens |
+|-------|---------|----------|--------------|
+| `'start'` | Title screen | Until tap | Same as current, updated title text |
+| `'buying'` | Act 1: buy watches | 30-40s timed | Cards fly up, slash real ones to buy, avoid fakes |
+| `'buyEnd'` | Transition screen | 2-3s auto | Shows inventory summary, "Maintenant, revends !" |
+| `'selling'` | Act 2: sell inventory | 30-40s timed | Buyer offers fly up, slash good offers, avoid lowballs |
+| `'over'` | Final results | Until tap | Total profit, Vinted rating, birthday message |
+
+#### Integration with Existing Game Loop
+
+The `gameLoop()` function (line 1350) dispatches on `gameState`. The extension is straightforward:
+
 ```javascript
-const entities = [];
+// Current (line 1362-1369):
+if (gameState === 'start') { renderStart(dt); }
+else if (gameState === 'playing') { update(dt); render(dt); }
+else if (gameState === 'over') { renderGameOver(); }
 
-function spawnWatch() {
-  entities.push({
-    x: Math.random() * canvas.width,
-    y: canvas.height + 50,
-    vx: (Math.random() - 0.5) * 200,
-    vy: -(400 + Math.random() * 200),  // launch upward
-    radius: 40,
-    isFake: Math.random() < 0.4,
-    name: pickWatchName(),
-    slashed: false,
-    rotation: 0,
-    rotationSpeed: (Math.random() - 0.5) * 5,
-  });
+// New:
+if (gameState === 'start') { renderStart(dt); }
+else if (gameState === 'buying') { updateBuying(dt); renderBuying(dt); }
+else if (gameState === 'buyEnd') { updateBuyEnd(dt); renderBuyEnd(dt); }
+else if (gameState === 'selling') { updateSelling(dt); renderSelling(dt); }
+else if (gameState === 'over') { renderGameOver(); }
+```
+
+**Key insight:** `updateBuying()` is essentially the current `update()` function with different scoring semantics (slashed real watches go to inventory instead of just adding score). `updateSelling()` reuses the same physics/spawn/collision infrastructure but with different entity data and scoring logic.
+
+#### Inventory Data Flow Between Acts
+
+```
+ACT 1 (buying)                    TRANSITION                ACT 2 (selling)
+
+spawnCard() -->
+  slash real --> inventory.push()  inventory[] passed        inventory[] displayed
+  slash fake --> penalty           as-is to Act 2            as "your stock"
+  miss real --> nothing
+                                  buyEnd screen shows:       spawnOffer() -->
+                                    inventory count            slash good offer --> sell item, profit
+                                    total spent                slash lowball --> penalty
+                                    "Revends !"                miss good offer --> nothing
+
+                                                             When inventory empty OR timer ends:
+                                                               gameState = 'over'
+```
+
+**Inventory data structure:**
+
+```javascript
+var inventory = [];  // populated during 'buying', consumed during 'selling'
+
+// Each inventory item:
+{
+  brand: 'Montignac',    // always real (only real watches get inventoried)
+  buyPrice: 10,          // what player "paid" (the card's value when slashed)
+  isGolden: false        // golden items worth more in selling phase
 }
+```
 
-function update(dt) {
-  for (const e of entities) {
-    e.vy += GRAVITY * dt;
-    e.x += e.vx * dt;
-    e.y += e.vy * dt;
-    e.rotation += e.rotationSpeed * dt;
+**Where in code:** Add `var inventory = [];` near other game state globals (line 16 area). Reset in `resetGame()` (line 1281). Populated in `slashWatch()` during buying phase. Read during selling phase to determine available stock and potential sale prices.
+
+#### Act 2: Selling Phase Entity Design
+
+In Act 2, the entities are "buyer offers" instead of watch cards. They reuse the same physics system but have different visual treatment and scoring:
+
+| Property | Act 1 (Card) | Act 2 (Offer) |
+|----------|-------------|---------------|
+| Visual | White Vinted card with watch illustration | Offer bubble/card with buyer avatar + price |
+| Good slash | Real watch --> inventory + cost | Fair/good offer --> sell from inventory + profit |
+| Bad slash | Fake watch --> penalty | Lowball offer --> sell at loss |
+| Miss | No penalty (missed buy) | Missed good offer --> no penalty |
+
+The `spawnOffer()` function parallels `spawnCard()`, creating entities with the same x/y/vx/vy/rotation physics but different rendering and value semantics.
+
+**Reuse analysis for Act 2:**
+
+| Component | Reusable? | Notes |
+|-----------|-----------|-------|
+| Entity physics (gravity, velocity, position) | 100% | Same array, same updateWatches() |
+| Trail input + rendering | 100% | Same swipe mechanic |
+| Collision detection | 100% | Same trail-to-hitbox check |
+| Split animation | 100% | Same halves with different draw function |
+| Particle system | 100% | Same particles, different colors |
+| Floating text | 100% | Same system, different messages |
+| Spawn timing + difficulty ramp | 90% | Same pattern, different parameters |
+| Draw function | 0% | New `drawOffer()` needed |
+| Scoring logic | 0% | New sell-profit logic needed |
+
+#### Input Handling Changes
+
+The input handler (lines 146-192) dispatches based on `gameState`. Currently:
+- `'start'` -> `handleStartTap()`
+- `'playing'` -> trail recording
+- `'over'` -> `handleReplayTap()`
+
+New dispatch:
+- `'start'` -> `handleStartTap()`
+- `'buying'` -> trail recording (same as current 'playing')
+- `'buyEnd'` -> auto-advance (no input needed, or tap to skip)
+- `'selling'` -> trail recording (same as current 'playing')
+- `'over'` -> `handleReplayTap()`
+
+The pointerdown handler (line 147) needs its `gameState` checks updated. The pointermove/pointerup handlers already guard on `gameState !== 'playing'`; this guard changes to `gameState !== 'buying' && gameState !== 'selling'`.
+
+### Feature 3: Audio Integration
+
+**What changes:** A new audio subsystem initializes an AudioContext, pre-loads sound buffers, and plays them on game events.
+
+#### Audio Subsystem Design
+
+```
+AUDIO MODULE (new)
+
+  audioCtx           -- single AudioContext, created once
+  soundBuffers{}     -- pre-decoded AudioBuffers keyed by name
+  audioUnlocked      -- boolean, set true after first user gesture
+
+  initAudio()        -- create AudioContext (called at page load)
+  unlockAudio()      -- resume AudioContext on user gesture
+  loadSound(name, url) -- fetch + decodeAudioData
+  playSound(name)    -- create BufferSource, connect, start
+```
+
+#### Mobile AudioContext Unlock
+
+Critical constraint: Mobile browsers require user gesture before AudioContext.resume(). The game already has a perfect hook: the "Jouer" button tap on the start screen.
+
+```javascript
+// In handleStartTap() -- line 1142
+function handleStartTap(px, py) {
+  if (/* button hit */) {
+    unlockAudio();  // <-- add this call
+    startGame();
   }
-  // Remove entities that fell off screen
-  entities = entities.filter(e => e.y < canvas.height + 100);
-}
-```
-
-### Pattern 3: Swipe Trail as Line Segments
-
-**What:** Touch input is captured as a series of (x, y, timestamp) points. During update, each line segment between consecutive points is tested for intersection with entity hitboxes (circles). This is how Fruit Ninja detects slashes.
-
-**When to use:** Any swipe-to-slash mechanic.
-
-**Trade-offs:** Simple circle-line-segment intersection is O(entities * segments) per frame, which is trivially fast for <50 entities and <20 trail points.
-
-**Example:**
-```javascript
-let swipeTrail = [];
-
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  swipeTrail.push({
-    x: (touch.clientX - rect.left) * (canvas.width / rect.width),
-    y: (touch.clientY - rect.top) * (canvas.height / rect.height),
-    time: performance.now(),
-  });
-});
-
-canvas.addEventListener('touchend', () => {
-  swipeTrail = [];
-});
-```
-
-### Pattern 4: State Machine for Screens
-
-**What:** The game has 3 screens (splash, playing, game over). A simple state machine controls which screen's update/render runs.
-
-**When to use:** Any game with multiple screens. Even for 3 screens, this is cleaner than tangled conditionals.
-
-**Trade-offs:** Slight overhead for a game this simple, but prevents spaghetti code as screens grow.
-
-**Example:**
-```javascript
-const STATES = { SPLASH: 'splash', PLAYING: 'playing', GAME_OVER: 'gameOver' };
-let currentState = STATES.SPLASH;
-
-function update(dt) {
-  switch (currentState) {
-    case STATES.SPLASH:   updateSplash(dt); break;
-    case STATES.PLAYING:  updatePlaying(dt); break;
-    case STATES.GAME_OVER: updateGameOver(dt); break;
-  }
 }
 
-function render() {
-  switch (currentState) {
-    case STATES.SPLASH:   renderSplash(); break;
-    case STATES.PLAYING:  renderPlaying(); break;
-    case STATES.GAME_OVER: renderGameOver(); break;
+function unlockAudio() {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
   }
 }
 ```
 
-## Data Flow
+The `touchend` / `click` event that triggers `handleStartTap` is a valid user gesture for AudioContext unlock on both iOS Safari and Chrome Android.
 
-### Per-Frame Data Flow
+#### Sound Effect Hook Points
 
-```
-requestAnimationFrame(timestamp)
-    |
-    v
-[Calculate delta time]
-    |
-    v
-[INPUT] Read swipe trail from touch event buffer
-    |
-    v
-[SPAWN] Timer check → maybe spawn new watch entity
-    |
-    v
-[PHYSICS] For each entity: apply gravity, update position, rotation
-    |
-    v
-[COLLISION] For each swipe segment x entity: check intersection
-    |    |
-    |    v (hit detected)
-    |    [GAME LOGIC] Mark entity slashed, update score, spawn slash effect
-    |
-    v
-[CLEANUP] Remove off-screen entities, expired effects, old trail points
-    |
-    v
-[RENDER] Clear canvas → draw background → draw entities → draw slash trail
-         → draw slash effects → draw UI (score, timer) → draw overlay text
-    |
-    v
-requestAnimationFrame(gameLoop)  // schedule next frame
-```
+| Event | Current Code Location | Sound |
+|-------|----------------------|-------|
+| Slash real watch | `slashWatch()` line 420, after `!watch.isFake` branch | "cha-ching" coin sound |
+| Slash fake watch | `slashWatch()` line 427, else branch | Error/buzzer sound |
+| Slash golden watch | `slashWatch()` line 453, `isGolden` check | Jackpot jingle |
+| Combo milestone | `slashWatch()` line 422, when `comboMultiplier` increases | Combo power-up |
+| Miss real watch | `updateWatches()` line 279, miss penalty | Sad trombone / whoosh |
+| Timer warning (10s) | `renderTimer()` line 988, `isFinal` branch | Tick-tock |
+| Act transition | New buyEnd state entry | Transition fanfare |
+| Game over | State change to 'over' | Results jingle |
+| Start game tap | `startGame()` | Button click |
 
-### State Transitions
+All these are point events (not loops), so `playSound()` creates a one-shot `AudioBufferSourceNode` each time. No need for looping or gain management.
 
-```
-[SPLASH]
-    | (tap anywhere)
-    v
-[PLAYING]
-    | (timer runs out OR 3 missed real watches)
-    v
-[GAME OVER]
-    | (tap to restart)
-    v
-[SPLASH] or [PLAYING]
-```
+#### Sound Asset Strategy
 
-### Key Data Flows
+**Option A: External audio files (mp3/ogg)**
+- Requires loading step (fetch + decode)
+- Adds asset management complexity
+- Best quality
+- Adds HTTP requests
 
-1. **Touch to slash:** `touchmove` event -> push to trail array -> collision check on next update -> mark entity as slashed -> score update -> visual effect spawn -> render slash animation
-2. **Watch lifecycle:** Spawn timer fires -> create entity with random position/velocity/type -> physics updates each frame -> either slashed (triggers score) or falls off-screen (triggers miss penalty if real watch) -> removed from array
-3. **Score flow:** Slash detected -> check `isFake` -> if real: `score += watchValue` -> if fake: `score -= penalty` -> UI re-renders score each frame
+**Option B: Procedurally generated sounds (Web Audio oscillators)**
+- Zero external assets
+- Instantly available, no loading
+- Limited to synthetic tones
+- Fits the game's handcrafted aesthetic
 
-## Build Order (Dependency Graph)
+**Option C: Base64-encoded audio inline in JS**
+- No extra HTTP requests
+- Small sounds (< 5KB each) encode well
+- Increases JS file size
+- Decode once on load
 
-This is the critical output for roadmap creation. Components have clear dependencies:
+**Recommendation: Option B (procedural) for most sounds, with Option A for 1-2 premium sounds if needed.**
 
-```
-Phase 1: Foundation (nothing depends on, everything depends on this)
-  ├── HTML/Canvas setup
-  ├── Game loop (requestAnimationFrame + dt)
-  └── Responsive canvas sizing
+The game is a joke birthday game with a handcrafted Canvas aesthetic. Procedural bleeps/boops fit the vibe perfectly. A simple `playTone(frequency, duration, type)` function using `OscillatorNode` + `GainNode` covers slash sounds, error buzzes, and coin chimes. If a specific sound (like a cash register "ka-ching") needs to sound realistic, load one small mp3 file.
 
-Phase 2: Core Mechanics (depends on Phase 1)
-  ├── Entity spawning (watches appearing)
-  ├── Physics (gravity, arcs) — depends on game loop
-  ├── Rendering entities — depends on entities + canvas
-  └── Touch input capture — depends on canvas
-
-Phase 3: Gameplay (depends on Phase 2)
-  ├── Swipe-to-slash collision detection — depends on input + entities
-  ├── Score system (real vs fake) — depends on collision
-  ├── Slash visual effects — depends on collision
-  └── Game timer — depends on game loop
-
-Phase 4: Game Flow (depends on Phase 3)
-  ├── Splash screen — depends on state machine
-  ├── Game over screen — depends on score + timer
-  ├── State transitions — depends on all screens
-  └── Difficulty ramping — depends on spawn + timer
-
-Phase 5: Polish (depends on Phase 4)
-  ├── Watch visuals (names, designs)
-  ├── Birthday personalization
-  ├── Animations (entry, slash, score popups)
-  └── Juice (screen shake, particles)
-```
-
-### Why This Order
-
-- **Canvas + game loop first** because literally everything else draws to the canvas and runs inside the loop. You cannot test anything without this.
-- **Physics + entities before input** because you want to see watches flying before you add slashing. Visual feedback keeps development on track.
-- **Input before scoring** because collision detection requires both entities and swipe trail to exist.
-- **Game flow last** because splash/game-over screens are just conditional rendering once the core works. They don't affect core mechanics.
-- **Polish is genuinely last** because it is pure visual refinement. The game is playable without it.
-
-## Scaling Considerations
-
-This is a single-player joke game. Scaling is a non-concern, but for completeness:
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 1 player on 1 phone | Current architecture. No changes needed. |
-| Party of 10 passing phone around | Ensure game resets cleanly (no memory leaks from accumulated entities/effects) |
-| Shared on social media, 100+ concurrent | Static file hosting handles this trivially. No server-side game state. |
-
-### Performance Priorities
-
-1. **First bottleneck:** Too many entities on screen at once (>50). Fix: cap spawn rate, ensure off-screen entities are cleaned up.
-2. **Second bottleneck:** Canvas draw calls. Fix: avoid `drawImage` with rotation per entity if possible -- use `arc()` and `fillText()` for simple rendering. If using images, keep sprite count low.
-3. **Not a bottleneck:** Touch events. Modern mobile browsers handle touch at 60-120hz easily.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Framework Overhead
-
-**What people do:** Reach for Phaser, PixiJS, or Three.js for a simple 2D game.
-**Why it's wrong:** For a game with <50 entities, simple physics, and 2D rendering, a framework adds 200KB-2MB of download, learning curve, and abstraction layers that slow development. The raw Canvas API is 20 lines to set up.
-**Do this instead:** Use raw `<canvas>` with `getContext('2d')`. The Canvas 2D API provides everything needed: `fillRect`, `arc`, `drawImage`, `fillText`, transforms, gradients.
-
-### Anti-Pattern 2: Premature Abstraction
-
-**What people do:** Create `Entity`, `Component`, `System` classes, an event bus, a scene graph, an asset loader pipeline -- for a game with one entity type and three screens.
-**Why it's wrong:** Adds days of architecture work for zero gameplay benefit. The game has watches. Just use an array of objects.
-**Do this instead:** Plain objects in an array. Functions, not classes. If a function gets too long, extract a helper. No inheritance, no design patterns for their own sake.
-
-### Anti-Pattern 3: Pixel-Perfect Canvas Sizing
-
-**What people do:** Set canvas CSS size and forget about the `width`/`height` attributes, resulting in blurry rendering on high-DPI screens.
-**Why it's wrong:** Canvas has a backing store resolution (the `width`/`height` attributes) separate from its CSS display size. If these don't account for `devicePixelRatio`, everything looks fuzzy on phones.
-**Do this instead:**
+Procedural sound example:
 ```javascript
-function resizeCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
+function playTone(freq, duration, type) {
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = type || 'sine';  // 'sine', 'square', 'sawtooth', 'triangle'
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
 ```
 
-### Anti-Pattern 4: Forgetting Touch Event preventDefault
+## New Component Inventory
 
-**What people do:** Add touch listeners but don't call `preventDefault()`, causing the browser to scroll, zoom, or trigger back-navigation on swipe.
-**Why it's wrong:** The game becomes unplayable -- swiping triggers browser gestures instead of slashing.
-**Do this instead:** Call `e.preventDefault()` in all touch handlers. Set `touch-action: none` in CSS on the canvas element. Use `<meta name="viewport" content="...user-scalable=no">` to prevent pinch zoom.
+| Component | Type | Lines (est.) | Dependencies |
+|-----------|------|-------------|--------------|
+| `drawCard()` | Replace | ~40 | Canvas roundRect, shadowColor/Blur |
+| `drawWatchIllustration()` | New | ~25 | Simplified version of current watch drawing |
+| `drawOffer()` | New | ~35 | Similar to drawCard but for buyer offers |
+| `lineSegmentIntersectsRect()` | New (maybe) | ~15 | Only if circle approximation fails playtesting |
+| `inventory[]` global | New | 1 | - |
+| `updateBuying()` | Refactored from `update()` | ~30 | Existing update logic + inventory push |
+| `updateSelling()` | New | ~35 | Similar to updateBuying with sell semantics |
+| `renderBuyEnd()` | New | ~40 | Transition screen between acts |
+| `updateBuyEnd()` | New | ~10 | Auto-advance timer |
+| `spawnOffer()` | New | ~25 | Parallels spawnCard with offer data |
+| `initAudio()` | New | ~5 | AudioContext creation |
+| `unlockAudio()` | New | ~5 | AudioContext.resume() |
+| `playTone()` | New | ~15 | OscillatorNode + GainNode |
+| Sound effect functions | New | ~40 | Wrappers calling playTone with specific params |
 
-### Anti-Pattern 5: Time-Based Spawning Without Frame Independence
+**Estimated total new/modified code: ~320 lines.** The file grows from ~1380 to ~1700 lines -- still manageable as a single file.
 
-**What people do:** Spawn a watch every N frames instead of every N seconds.
-**Why it's wrong:** On a 120hz phone, watches spawn twice as fast. On a lagging phone, they spawn half as fast. Gameplay varies wildly by device.
-**Do this instead:** Track spawn with a real-time accumulator: `spawnTimer -= dt; if (spawnTimer <= 0) { spawn(); spawnTimer = spawnInterval; }`
+## Data Flow Changes
 
-## Integration Points
+### Current Per-Frame Flow (Act 1 / Buying)
 
-### External Services
+Same as current with one addition at slash:
 
-None. This is a fully static, client-side game with zero external dependencies.
+```
+[COLLISION HIT on real watch]
+    |
+    v
+slashWatch() {
+  // existing: mark slashed, score, combo, particles, floating text
+  // NEW: inventory.push({ brand, buyPrice, isGolden })
+}
+```
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| None | N/A | Fully self-contained static files |
+### New: Act Transition Flow
 
-### Internal Boundaries
+```
+[buying timer expires]
+    |
+    v
+gameState = 'buyEnd'
+    |
+    v
+[buyEnd screen renders for 2-3 seconds]
+    |
+    v
+[auto-advance or tap]
+    |
+    v
+gameState = 'selling'
+initSellingPhase()  // resets watches[], spawns offers based on inventory
+```
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Touch events -> Game state | Event listeners push to swipe trail array, game loop reads it | One-directional: DOM events write, game loop reads and clears |
-| Game state -> Renderer | Renderer reads entity array + score + state each frame | Read-only: renderer never mutates game state |
-| Game logic -> State machine | Game logic sets `currentState` on timer end or game over condition | Simple variable assignment, no event system needed |
-| Spawner -> Entity array | Spawner pushes new objects into the entity array on timer | Direct array push, no abstraction needed |
+### New: Act 2 Per-Frame Flow
+
+```
+[SPAWN] spawnOffer() -- creates buyer offer entities
+    |
+    v
+[PHYSICS] Same updateWatches() -- gravity, position, cleanup
+    |
+    v
+[COLLISION] Same checkSlashCollisions() -- trail vs offer hitboxes
+    |
+    v
+[HIT] slashOffer(offer) {
+    if (offer.isGoodDeal) {
+      // sell from inventory, add profit
+      var item = inventory.pop()  // or pick matching item
+      var profit = offer.price - item.buyPrice
+      score += profit
+    } else {
+      // lowball accepted -- loss
+      score -= penalty
+    }
+    // same: particles, floating text, split halves
+}
+    |
+    v
+[END CONDITION] inventory.length === 0 OR selling timer expires
+    --> gameState = 'over'
+```
+
+### State Reset Flow
+
+```
+resetGame() {
+  // existing resets (score, elapsed, combo, watches, particles, etc.)
+  // NEW:
+  inventory = []
+  sellingElapsed = 0
+  buyingElapsed = 0
+}
+```
+
+## Suggested Build Order
+
+Based on dependency analysis, the features should be built in this order:
+
+### Step 1: Card Rendering (no gameplay changes)
+
+Replace watch drawing with card drawing while keeping everything else identical. This is a pure visual swap with zero gameplay impact.
+
+**Why first:** It is the highest-risk visual change (replacing 200+ lines of drawing code) and is completely independent of the state machine and audio. Test it in isolation.
+
+**Specifically:**
+1. Define card dimensions (width/height) replacing `WATCH_SIZE`
+2. Write `drawCard()` with roundRect, shadow, watch illustration, brand text
+3. Update `drawWatch()` to call `drawCard()` (or rename)
+4. Update `renderHalf()` to use new draw function
+5. Verify split animation works with rectangular cards
+6. Adjust hitbox if needed (circle approximation vs rect collision)
+7. Update `spawnWatch()` to set card-appropriate properties
+8. Update decorative watches on start screen
+
+### Step 2: Two-Act State Machine (core mechanic change)
+
+Extend the state machine to support buying and selling phases. This is the biggest architectural change.
+
+**Why second:** Depends on card rendering being stable. The state machine restructures `update()` and `render()` dispatch, and introduces inventory -- the central new data structure.
+
+**Specifically:**
+1. Rename 'playing' to 'buying' in gameState checks
+2. Add `inventory[]` global, populate on real-watch slash
+3. Add 'buyEnd' state with transition screen and auto-advance timer
+4. Add 'selling' state with `spawnOffer()`, `updateSelling()`, `renderSelling()`
+5. Write `drawOffer()` for buyer offer entities
+6. Implement sell scoring logic (offer price vs buy price = profit)
+7. Update end condition: selling timer expires OR inventory empty
+8. Update `renderGameOver()` with two-act stats
+9. Update `resetGame()` to clear all new state
+10. Update input handler state checks
+
+### Step 3: Audio (polish layer)
+
+Add sound effects. This is purely additive and touches no existing logic except to insert `playSound()` calls at hook points.
+
+**Why last:** Depends on nothing except the game working. Can be dropped entirely without affecting gameplay. Easiest to test (does it make the right sound at the right time?).
+
+**Specifically:**
+1. `initAudio()` -- create AudioContext
+2. `unlockAudio()` -- hook into start button tap
+3. `playTone()` -- procedural sound generator
+4. Define sound effect wrappers: `sfxSlash()`, `sfxCoin()`, `sfxError()`, `sfxJackpot()`, `sfxCombo()`, `sfxMiss()`, `sfxTransition()`
+5. Insert calls at all hook points (see table above)
+6. Test on mobile (AudioContext unlock, volume, timing)
+
+## Reuse vs Rewrite Summary
+
+| Existing Code | Action | Rationale |
+|---------------|--------|-----------|
+| Game loop (`gameLoop`, `requestAnimationFrame`) | KEEP | Same loop, more states in dispatch |
+| Canvas setup (`resize`, `initCanvas`) | KEEP | No changes needed |
+| Input handling (`setupInput`) | MODIFY | Update gameState guards for new states |
+| Watch physics (`updateWatches`) | KEEP | Cards have same physics as watches |
+| Trail system | KEEP | Same swipe mechanic in both acts |
+| Collision detection | KEEP | Circle approximation works for cards |
+| Split halves system | MODIFY | Change draw call inside `renderHalf()` |
+| Particle system | KEEP | Same particles, different colors per act |
+| Floating text system | KEEP | Same system, different messages |
+| Score display | KEEP | Same HUD, score semantics unchanged |
+| Timer display | MODIFY | Show act-specific timer text |
+| Combo display | KEEP | Combo works same way in both acts |
+| Rating display | KEEP | Same rating, evaluated at game over |
+| Start screen | MODIFY | Update title/subtitle for new game flow |
+| Game over screen | MODIFY | Show two-act stats (bought, sold, profit) |
+| Difficulty ramp | MODIFY | Separate ramp parameters per act |
+| Watch drawing (3 styles) | REPLACE | New `drawCard()` replaces 3 functions |
+| Brand label drawing | REPLACE | Integrated into card layout |
+| Spawn function | MODIFY | Card properties instead of watch properties |
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern: Splitting into Multiple Files
+
+**Temptation:** "This file is getting big, let's split into audio.js, cards.js, states.js"
+**Why avoid:** The project constraint is zero build tools. Multiple script files require manual ordering in HTML, create global namespace pollution, and add no value for a 1700-line single-developer file. The existing single-file approach works. Keep it.
+
+### Anti-Pattern: Abstract Entity System
+
+**Temptation:** "Cards and Offers are both entities, let's create a base Entity class"
+**Why avoid:** They share physics (which is just 4 lines of Euler integration) but differ in everything else (drawing, scoring, spawning). An inheritance hierarchy adds complexity without reducing code. Keep them as separate spawn/draw/slash functions that happen to use the same `watches[]` array and `updateWatches()` physics.
+
+### Anti-Pattern: Audio Manager Class
+
+**Temptation:** "Let's create a SoundManager with play queues, volume control, fade-in/out"
+**Why avoid:** The game needs ~8 one-shot sound effects. A flat set of functions (`initAudio`, `unlockAudio`, `playTone`, and 6-8 sound wrappers) is all that is needed. No queuing, no looping, no volume management beyond the initial gain envelope.
+
+### Anti-Pattern: Complex State Machine Library
+
+**Temptation:** "Let's use a formal state machine library for transitions"
+**Why avoid:** The current game uses a string variable and if/else. That pattern scales perfectly to 5 states. A library adds a dependency and learning curve for zero benefit. Keep the string-based approach.
+
+## Performance Considerations
+
+| Concern | Impact | Mitigation |
+|---------|--------|------------|
+| Card shadows (shadowBlur) | Moderate -- shadow rendering is expensive in Canvas 2D | Use small blur (4-8px). Set `shadowColor = 'transparent'` immediately after card body fill to avoid shadow on inner elements |
+| More entity types in Act 2 | Low -- still <50 entities on screen | Same caps as current game |
+| AudioContext creation | None -- created once | - |
+| Sound effect playback | None -- OscillatorNode is lightweight | One-shot nodes auto-garbage-collect after stop() |
+| roundRect() | None -- native Canvas method | Supported in all target browsers |
 
 ## Sources
 
-- Canvas 2D API: Stable W3C specification, universally supported across all modern browsers. No version concerns.
-- `requestAnimationFrame`: Standard browser API since 2012. Universal support.
-- Touch Events API: Standard browser API. Universal mobile support.
-- Game loop patterns: Foundational game development knowledge (cf. "Game Programming Patterns" by Robert Nystrom, freely available at gameprogrammingpatterns.com). These patterns have been unchanged for decades.
-
-**Confidence note:** All patterns described here are foundational, stable, and well-established. HTML5 Canvas game architecture has not meaningfully changed since 2015. No verification against current sources is needed -- this is equivalent to recommending "use a for-loop to iterate an array."
+- [CanvasRenderingContext2D.roundRect() -- MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/roundRect) -- Baseline Widely Available since April 2023 (Chrome 99, Safari 16.4, Firefox 112)
+- [Canvas shadow properties -- MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowColor) -- shadowColor, shadowBlur, shadowOffsetX/Y
+- [Audio for Web Games -- MDN](https://developer.mozilla.org/en-US/docs/Games/Techniques/Audio_for_Web_Games) -- AudioContext unlock pattern, sound sprites, mobile autoplay policy
+- [Web Audio API -- MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) -- OscillatorNode, GainNode, AudioBufferSourceNode
+- [Unlock Web Audio in Safari -- Matt Montag](https://www.mattmontag.com/web/unlock-web-audio-in-safari-for-ios-and-macos) -- iOS-specific AudioContext resume pattern
+- [Line/Rectangle Collision Detection -- Jeffrey Thompson](https://www.jeffreythompson.org/collision-detection/line-rect.php) -- Line-segment-to-rectangle intersection algorithm
+- [2D Collision Detection -- MDN](https://developer.mozilla.org/en-US/docs/Games/Techniques/2D_collision_detection) -- AABB and circle collision patterns
+- [State Pattern -- Game Programming Patterns](https://gameprogrammingpatterns.com/state.html) -- State machine architecture for games
 
 ---
-*Architecture research for: Watch Ninja (HTML5 Canvas arcade game)*
-*Researched: 2026-02-07*
+*Architecture research for: Watch Ninja v1.1 (Vinted Cards, Buy/Sell, Audio)*
+*Researched: 2026-02-08*

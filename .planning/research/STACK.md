@@ -1,269 +1,509 @@
 # Technology Stack
 
-**Project:** Watch Ninja (Fruit Ninja-style mobile browser game)
-**Researched:** 2026-02-07
-**Overall confidence:** MEDIUM-HIGH (training data only -- web search/npm registry unavailable for version verification)
+**Project:** Watch Ninja v1.1 -- Vinted Cards, Buy/Sell, Sound Effects
+**Researched:** 2026-02-08
+**Scope:** Stack additions for v1.1 features only (v1.0 stack validated and unchanged)
 
 ---
 
-## Recommendation: Vanilla JS + HTML5 Canvas 2D. No libraries.
+## Baseline Stack (Unchanged from v1.0)
 
-For a joke birthday game that needs to ship in under a week, every dependency is a liability. HTML5 Canvas 2D provides everything this game needs natively. Adding a game framework would increase complexity, bundle size, and debugging surface -- all for features this game will never use.
+These are validated and deployed. DO NOT re-evaluate:
+
+| Technology | Status |
+|------------|--------|
+| Vanilla JS (ES2020+, single `game.js` file) | Deployed, working |
+| HTML5 Canvas 2D with DPR-aware sizing | Deployed, working |
+| Pointer Events API for touch input | Deployed, working |
+| `requestAnimationFrame` game loop with delta-time | Deployed, working |
+| nginx:alpine Docker deployment | Deployed, working |
+| GitHub Actions CI/CD | Deployed, working |
+| Zero dependencies, zero build tools | Validated constraint |
 
 ---
 
-## Recommended Stack
+## New Stack Additions for v1.1
 
-### Rendering: HTML5 Canvas 2D API
+### 1. Vinted Card Rendering on Canvas 2D
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| HTML5 Canvas 2D Context | Native (all browsers) | Render watches, slashes, particles, score | Zero dependencies. Universally supported on mobile Chrome. Perfect for simple 2D sprite rendering with `drawImage()`, bezier curves for slash trails, and basic particle effects. No build step. | HIGH |
+**Recommendation:** Use the existing Canvas 2D API with pre-rendered offscreen canvases for card caching. No new dependencies.
 
-**Why Canvas 2D and not alternatives:**
+#### Canvas 2D `roundRect()` -- Use the Native API
 
-| Option | Verdict | Rationale |
-|--------|---------|-----------|
-| **Canvas 2D** | USE THIS | Native browser API, zero bytes to download, perfect for 2D sprite games, excellent mobile Chrome support, simple `requestAnimationFrame` game loop. Well-documented, stable for 10+ years. |
-| **WebGL** | OVERKILL | Adds shader complexity for zero visual benefit in a 2D sprite game. Canvas 2D handles hundreds of sprites at 60fps on modern phones. WebGL only matters for particle-heavy or 3D games. |
-| **DOM-based (CSS transforms)** | TOO SLOW | DOM manipulation triggers layout/reflow. Animating 10+ flying watches + slash trails + particles via DOM elements will drop frames. Canvas bypasses the DOM entirely. |
-| **SVG** | WRONG TOOL | SVG is for vector graphics and documents, not real-time game loops. No `requestAnimationFrame` integration, awkward hit detection, poor performance with many animated elements. |
+| Technique | Confidence | Why |
+|-----------|------------|-----|
+| `ctx.roundRect(x, y, w, h, radii)` | HIGH | Baseline Widely Available since April 2023. Chrome 99+, Safari 16+, Firefox 112+, Edge 99+. 94.74% global support per caniuse. Target is mobile Chrome only -- fully supported. |
 
-### Language: Vanilla JavaScript (ES2020+)
+The codebase already has a manual `roundRect()` helper (line 965 of `game.js`) using `quadraticCurveTo`. For v1.1, **replace with the native `ctx.roundRect()`** method for cleaner code. The native method accepts per-corner radii and integrates with `fill()`/`stroke()` natively.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Vanilla JS (ES2020+) | Native | All game logic, input handling, rendering | No build tools needed. Mobile Chrome supports all modern JS features (optional chaining, nullish coalescing, modules). Ship `.js` files directly. | HIGH |
-
-**Why not TypeScript:** TypeScript needs a build step (tsc or bundler). For a < 1 week joke game with maybe 500 lines of code, type safety adds friction without proportional benefit. Just use JSDoc comments for IDE hints if desired.
-
-### Touch Input: Native Touch Events API + Pointer Events API
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Pointer Events API | Native | Swipe detection, slash drawing | Unified API that handles touch, mouse, and pen. `pointerdown`, `pointermove`, `pointerup`. Works across all modern browsers. Simpler than Touch Events for single-finger swipe tracking. | HIGH |
-| `touch-action: none` CSS | Native | Prevent browser scroll/zoom on game canvas | Critical. Without this, swipe gestures trigger page scroll instead of game input. One CSS property prevents all default touch behaviors on the canvas. | HIGH |
-
-**Implementation pattern:**
+**Current code (v1.0):**
 ```javascript
-// In CSS: canvas { touch-action: none; }
+// Manual helper -- 10 lines of quadraticCurveTo paths
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  // ... 6 more lines
+}
+```
 
-canvas.addEventListener('pointerdown', (e) => {
-  slashPoints = [{ x: e.clientX, y: e.clientY, t: Date.now() }];
-});
+**v1.1 replacement:**
+```javascript
+// Native API -- 1 line
+ctx.beginPath();
+ctx.roundRect(x, y, w, h, radius);
+ctx.fill();
+```
 
-canvas.addEventListener('pointermove', (e) => {
-  if (slashPoints) {
-    slashPoints.push({ x: e.clientX, y: e.clientY, t: Date.now() });
-    // Draw slash trail, check intersections with watches
+**Source:** [MDN CanvasRenderingContext2D.roundRect()](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/roundRect), [Can I Use roundRect](https://caniuse.com/mdn-api_canvasrenderingcontext2d_roundrect) -- HIGH confidence.
+
+#### Card Shadow -- Use `shadowOffsetY` with Minimal `shadowBlur`
+
+| Approach | Recommendation |
+|----------|---------------|
+| `ctx.shadowBlur` on every frame | AVOID -- expensive on mobile, causes frame drops |
+| Pre-render card with shadow to offscreen canvas | USE THIS -- draw once, `drawImage()` per frame |
+
+Canvas shadows are computationally expensive. MDN explicitly warns: "Avoid the shadowBlur property whenever possible" for performance. Since Vinted cards are drawn every frame for 10-20 flying objects, **pre-render the card template once to an offscreen canvas** and stamp it with `drawImage()` each frame.
+
+**Pattern -- Offscreen card cache:**
+```javascript
+function createCardCache(width, height, radius) {
+  var padding = 10; // extra space for shadow
+  var offscreen = document.createElement('canvas');
+  offscreen.width = (width + padding * 2) * dpr;
+  offscreen.height = (height + padding * 2) * dpr;
+  var offCtx = offscreen.getContext('2d');
+  offCtx.scale(dpr, dpr);
+
+  // Draw shadow ONCE (expensive, but only done once)
+  offCtx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+  offCtx.shadowBlur = 8;
+  offCtx.shadowOffsetY = 2;
+
+  // White card background
+  offCtx.fillStyle = '#ffffff';
+  offCtx.beginPath();
+  offCtx.roundRect(padding, padding, width, height, radius);
+  offCtx.fill();
+
+  // Reset shadow for subsequent drawing
+  offCtx.shadowColor = 'transparent';
+  offCtx.shadowBlur = 0;
+
+  return offscreen;
+}
+```
+
+**Key insight:** The offscreen canvas should be snugly sized around the card content. MDN warns that "the performance gain of off-screen rendering is counterweighted by the performance loss of copying one large canvas onto another."
+
+**Source:** [MDN Optimizing Canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas), [web.dev Canvas Performance](https://web.dev/articles/canvas-performance) -- HIGH confidence.
+
+#### Card Text Layout -- `measureText()` + Manual Line Positioning
+
+Canvas 2D has no text wrapping. Use `ctx.measureText()` for width measurement and manually position each line.
+
+**Vinted card text layout:**
+```javascript
+// Brand name -- large, bold, below watch illustration
+ctx.font = 'bold 14px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillStyle = '#171717'; // Vinted dark text
+ctx.fillText(brand, cardCenterX, textY);
+
+// Price tag
+ctx.font = '13px sans-serif';
+ctx.fillStyle = '#007782'; // Vinted teal
+ctx.fillText(price, cardCenterX, textY + 18);
+```
+
+The brand name is now rendered at 14px on a white background, dramatically more readable than the current 11px text on a rotating watch dial at 0.25 opacity.
+
+**Confidence:** HIGH -- `measureText()` and text rendering are stable Canvas 2D APIs.
+
+#### Card Watch Illustration -- Simplified Inline Drawing
+
+Keep drawing the watch illustration with Canvas primitives (the existing `drawRoundWatch`/`drawSquareWatch`/`drawSportWatch` functions), but scaled down to fit inside the card's top section. This maintains the existing visual style and avoids needing image assets.
+
+**Structure of a Vinted card:**
+```
++-------------------+
+|  [watch drawing]  |  <- top 60%, existing draw functions at smaller scale
+|                   |
+|-------------------|
+|   Montignac       |  <- brand name, bold, 14px, dark
+|     25 EUR        |  <- price, teal, 13px
++-------------------+
+```
+
+**Card dimensions recommendation:** ~90px wide x ~120px tall (CSS pixels). This is larger than the current 60px watch diameter, giving significantly more space for readable text. Cards rotate and fly with the same physics as before.
+
+#### Summary of Card Rendering Stack
+
+| Component | Technique | New API? | Confidence |
+|-----------|-----------|----------|------------|
+| Card shape | `ctx.roundRect()` native | Yes (replaces manual helper) | HIGH |
+| Card shadow | Pre-render to offscreen canvas | No (existing API, new pattern) | HIGH |
+| Card text | `ctx.font`, `ctx.fillText`, `ctx.measureText` | No | HIGH |
+| Watch illustration | Existing `drawRoundWatch` etc., scaled | No | HIGH |
+| Per-frame stamping | `ctx.drawImage(offscreenCanvas, ...)` | No | HIGH |
+
+---
+
+### 2. Sound Effects -- Web Audio API
+
+**Recommendation:** Web Audio API with procedural sound generation. No audio files needed.
+
+#### Why Web Audio API, Not HTML5 `<audio>` Elements
+
+| Factor | HTML5 `<audio>` | Web Audio API | Winner |
+|--------|-----------------|---------------|--------|
+| Overlapping sounds | One playback per element; need multiple `<audio>` for overlap | Create new `AudioBufferSourceNode` per play, unlimited overlapping | Web Audio |
+| Latency | Variable, often 50-100ms delay on mobile | Near-zero latency, frame-accurate | Web Audio |
+| Mobile restrictions | Volume control often disabled; limited to 1 channel on iOS | Full programmatic volume; unlimited simultaneous sources | Web Audio |
+| File dependency | Needs .mp3/.wav files served by nginx | Can generate sounds procedurally with oscillators -- zero files | Web Audio |
+| Complexity | Simple `.play()` API | More code for AudioContext setup | HTML5 Audio |
+
+**Verdict:** For game sound effects that must play simultaneously (slash + coin on same frame), with low latency, and ideally without external audio files -- **Web Audio API is the clear choice.**
+
+The v1.0 STACK.md recommended "start with HTML5 Audio, switch if needed." After deeper research, I recommend going directly to Web Audio API because:
+1. Game SFX require overlapping playback (slash two watches in quick succession)
+2. Mobile Chrome throttles HTML5 Audio for overlapping plays
+3. Procedural generation means zero audio files to manage or deploy
+4. The code is only ~50 lines per sound effect
+
+**Source:** [MDN Audio for Web Games](https://developer.mozilla.org/en-US/docs/Games/Techniques/Audio_for_Web_Games), [Chrome Web Audio Autoplay Policy](https://developer.chrome.com/blog/web-audio-autoplay) -- HIGH confidence.
+
+#### AudioContext Initialization -- User Gesture Required
+
+Mobile Chrome requires a user gesture before audio plays. The game already has a "Jouer" button on the start screen -- **create or resume the AudioContext in the `handleStartTap` handler.**
+
+```javascript
+var audioCtx = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function handleStartTap(px, py) {
+  if (/* hit test */) {
+    initAudio(); // User gesture -- AudioContext starts in 'running' state
+    startGame();
   }
-});
-
-canvas.addEventListener('pointerup', () => {
-  slashPoints = null;
-});
-```
-
-**Why Pointer Events over Touch Events:** Pointer Events are the modern standard, supported in all browsers since 2019+. They provide a single API for touch, mouse, and stylus. Touch Events still work but are legacy. Pointer Events also make desktop testing easy (mouse works the same as finger).
-
-### Audio: Web Audio API (optional, HTML5 Audio fallback)
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| HTML5 `<audio>` elements | Native | Slash sounds, score sounds, background music | Simplest option. Preload a few `.mp3` files, call `.play()`. Good enough for a birthday game. | HIGH |
-| Web Audio API | Native | Low-latency sound effects (optional upgrade) | If `<audio>` has noticeable delay on mobile, Web Audio API provides frame-accurate playback. More code, but zero dependencies. | MEDIUM |
-
-**Recommendation:** Start with HTML5 `<audio>`. Only switch to Web Audio API if sound latency is noticeable during testing. For a joke game, audio is a nice-to-have, not a blocker.
-
-**Mobile audio gotcha:** Mobile browsers require a user gesture before playing audio. Add a "Tap to Start" screen that calls `audioContext.resume()` or plays a silent audio clip to unlock audio playback.
-
-### Hosting: Static files via nginx in Docker
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| nginx | latest (alpine) | Serve static files | The project spec already calls for Docker/nginx. Serve `index.html`, `game.js`, `style.css`, and image assets. No server-side logic needed. | HIGH |
-| Docker | latest | Container for nginx | Already specified in project requirements. | HIGH |
-
-### Asset Format
-
-| Asset Type | Format | Why | Confidence |
-|------------|--------|-----|------------|
-| Watch images | PNG with transparency | Simple, universal, supports alpha channel for watch cutouts. Use ~200x200px sprites to keep file size small. | HIGH |
-| Slash trail | Canvas 2D drawing (bezier curves) | Draw programmatically -- no asset needed. Quadratic bezier curves through pointer positions create a smooth slash effect. | HIGH |
-| Particle effects | Canvas 2D drawing | Small colored rectangles/circles drawn with `fillRect`/`arc`. No sprite sheets needed for a simple juice effect. | HIGH |
-| Background | CSS gradient or single PNG | Keep it simple. A solid color or subtle gradient works fine. | HIGH |
-| Sounds (optional) | MP3 | Universal codec support on mobile Chrome. Keep files under 100KB each. | HIGH |
-
----
-
-## Game Architecture (Vanilla JS)
-
-No framework needed. The game is simple enough for a hand-rolled game loop:
-
-```
-index.html          -- Canvas element, viewport meta, load game.js
-style.css           -- Full-screen canvas, touch-action: none
-game.js             -- All game logic (or split into modules below)
-assets/             -- Watch PNGs, optional sound files
-```
-
-If splitting `game.js` for clarity (recommended for maintainability even in a small game):
-
-```
-js/main.js          -- Game loop, state management, init
-js/watch.js         -- Watch class (position, velocity, rotation, type)
-js/slash.js         -- Slash trail rendering and collision detection
-js/particles.js     -- Particle effects on slash hit
-js/score.js         -- Score/money tracking and display
-js/input.js         -- Pointer event handling
-```
-
-Use ES modules (`<script type="module">`) -- no bundler needed, mobile Chrome supports them natively.
-
----
-
-## Libraries Considered and Rejected
-
-### Game Frameworks
-
-| Library | Latest Known Version | Verdict | Why Not |
-|---------|---------------------|---------|---------|
-| **Phaser** | ~3.80+ | REJECT | 1MB+ minified. Massive overkill for a single-screen swipe game. Brings physics engines, tilemap support, scene management -- none of which this game needs. Requires understanding Phaser's lifecycle, config objects, and scene system. More time learning Phaser than writing vanilla code. |
-| **PixiJS** | ~8.x | REJECT | Excellent 2D renderer, but overkill. Uses WebGL by default (Canvas fallback). Adds a dependency, a learning curve, and ~500KB for features this game won't use (sprite batching, filters, mesh rendering). Canvas 2D handles 20 sprites at 60fps trivially. |
-| **Kaplay** (formerly Kaboom.js) | ~3000.x | MAYBE | Lightweight, fun API, designed for simple games. If you want a library, this would be the one. But it still adds a dependency and API to learn. For a < 1 week timeline, vanilla JS is faster if you know Canvas. |
-| **Konva** | ~9.x | REJECT | Canvas library designed for interactive UIs (drag/drop, charts), not games. No game loop, no collision detection. Wrong tool. |
-| **Three.js** | ~0.170+ | REJECT | 3D library. This is a 2D game. |
-| **p5.js** | ~1.11+ | REJECT | Creative coding library, not a game framework. Would work technically but adds 1MB+ for drawing helpers that Canvas 2D already provides natively. |
-
-**Version note:** Versions listed above are from training data (cutoff: early 2025). They may be slightly outdated. For a game that uses zero external libraries, this is irrelevant.
-
-### Utility Libraries
-
-| Library | Verdict | Why Not |
-|---------|---------|---------|
-| **Howler.js** (audio) | REJECT | Nice API for cross-browser audio, but HTML5 `<audio>` works fine on mobile Chrome. Only one browser to support. |
-| **Hammer.js** (touch gestures) | REJECT | Gesture recognition library -- detects swipe/pinch/rotate. But we need raw pointer positions to draw slash trails and check collision, not high-level gesture events. Hammer.js would abstract away the data we need. |
-| **GSAP** (animation) | REJECT | Tweening library for DOM animations. We're drawing directly to Canvas; `requestAnimationFrame` + manual interpolation is simpler and has zero overhead. |
-
----
-
-## Critical Viewport and Mobile Configuration
-
-This is the most commonly missed piece in mobile Canvas games:
-
-```html
-<!-- index.html -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0, user-scalable=no">
-```
-
-```css
-/* style.css */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;           /* Prevent scrollbars */
-  position: fixed;            /* Prevent iOS bounce scroll */
-}
-
-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;         /* CRITICAL: prevents browser swipe/scroll/zoom */
 }
 ```
+
+If `AudioContext` is created before a user gesture, it starts in `'suspended'` state and must be explicitly resumed with `audioCtx.resume()`. Creating it ON the gesture avoids this entirely.
+
+**Source:** [MDN Web Audio API Best Practices](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices), [Chrome Autoplay Policy](https://developer.chrome.com/blog/autoplay) -- HIGH confidence.
+
+#### Procedural Sound Generation -- Zero Audio Files
+
+Generate all three sound effects with oscillators + gain envelopes. This keeps the project at zero external dependencies and zero additional files.
+
+**Slash sound** (quick frequency sweep down, ~100ms):
+```javascript
+function playSlash() {
+  if (!audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+```
+
+**Coin sound** (two-tone ascending ping, ~200ms):
+```javascript
+function playCoin() {
+  if (!audioCtx) return;
+  var t = audioCtx.currentTime;
+  // First ping
+  var osc1 = audioCtx.createOscillator();
+  var gain1 = audioCtx.createGain();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(880, t);
+  gain1.gain.setValueAtTime(0.3, t);
+  gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+  osc1.connect(gain1);
+  gain1.connect(audioCtx.destination);
+  osc1.start(t);
+  osc1.stop(t + 0.1);
+  // Second ping (higher)
+  var osc2 = audioCtx.createOscillator();
+  var gain2 = audioCtx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(1320, t + 0.08);
+  gain2.gain.setValueAtTime(0.3, t + 0.08);
+  gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  osc2.connect(gain2);
+  gain2.connect(audioCtx.destination);
+  osc2.start(t + 0.08);
+  osc2.stop(t + 0.2);
+}
+```
+
+**Penalty sound** (low buzz, ~200ms):
+```javascript
+function playPenalty() {
+  if (!audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.2);
+}
+```
+
+Each `AudioBufferSourceNode` / `OscillatorNode` is a one-shot: create it, start it, it gets garbage collected after stopping. No pooling needed -- the Web Audio API handles thousands of simultaneous sources without issue.
+
+**Source:** [MDN OscillatorNode](https://developer.mozilla.org/en-US/docs/Web/API/OscillatorNode), [MDN Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) -- HIGH confidence.
+
+#### Alternative: Pre-recorded Audio Files
+
+If procedural sounds feel too "synthy" during testing, switch to tiny .mp3 files loaded via `fetch()` + `decodeAudioData()`:
 
 ```javascript
-// Canvas sizing (handle device pixel ratio for sharp rendering)
-function resizeCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
-  ctx.scale(dpr, dpr);
+var slashBuffer = null;
+
+async function loadSound(url) {
+  var response = await fetch(url);
+  var arrayBuffer = await response.arrayBuffer();
+  return audioCtx.decodeAudioData(arrayBuffer);
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+
+function playBuffer(buffer) {
+  if (!audioCtx || !buffer) return;
+  var source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioCtx.destination);
+  source.start();
+}
+
+// Load after AudioContext init:
+slashBuffer = await loadSound('sounds/slash.mp3');
 ```
 
-**Why this matters:** Without `touch-action: none`, every swipe scrolls the page. Without DPR handling, sprites look blurry on high-density phone screens. Without `overflow: hidden` + `position: fixed`, the canvas bounces on iOS (and some Android Chrome configurations).
+**Free sound sources (if needed):** [Freesound.org](https://freesound.org/) (CC0), [Mixkit](https://mixkit.co/free-sound-effects/) (free license), [Pixabay Sound Effects](https://pixabay.com/sound-effects/) (royalty-free).
+
+**Recommendation:** Start with procedural generation. It matches the game's arcade aesthetic and avoids file management. Switch to pre-recorded only if the sounds feel wrong during playtesting.
+
+#### Summary of Audio Stack
+
+| Component | Technique | New API? | Files Needed | Confidence |
+|-----------|-----------|----------|-------------|------------|
+| Audio engine | Web Audio API (`AudioContext`) | Yes -- new for v1.1 | 0 | HIGH |
+| AudioContext init | Create on first user tap | Yes | 0 | HIGH |
+| Slash sound | Sawtooth oscillator, freq sweep 800->200Hz | Yes | 0 | HIGH |
+| Coin sound | Two sine oscillator pings, 880Hz + 1320Hz | Yes | 0 | HIGH |
+| Penalty sound | Square oscillator, low 150Hz buzz | Yes | 0 | HIGH |
+| Fallback | Pre-recorded .mp3 via `decodeAudioData` | Optional | 3 small .mp3 | HIGH |
 
 ---
 
-## What to Install
+### 3. Two-Act Game State Machine
 
-```bash
-# Nothing. Zero npm install. Zero build tools.
+**Recommendation:** Extend the existing `gameState` string variable to cover new states. No state machine library needed.
 
-# Project setup:
-mkdir -p watch-ninja/assets
-touch watch-ninja/index.html
-touch watch-ninja/style.css
-touch watch-ninja/game.js
+#### Current State Machine (v1.0)
 
-# Docker setup:
-# Simple Dockerfile with nginx:alpine serving the watch-ninja/ directory
+```
+'start' --[tap Jouer]--> 'playing' --[timer expires]--> 'over'
+   ^                                                       |
+   +------------------[tap Rejouer]------------------------+
 ```
 
-### Dockerfile
+The current implementation uses a simple string variable `gameState` (line 13 of `game.js`) checked in the game loop:
 
-```dockerfile
-FROM nginx:alpine
-COPY . /usr/share/nginx/html
-EXPOSE 80
+```javascript
+if (gameState === 'start') { renderStart(dt); }
+else if (gameState === 'playing') { update(dt); render(dt); }
+else if (gameState === 'over') { renderGameOver(); }
 ```
 
-That's it. `docker build -t watch-ninja . && docker run -p 8080:80 watch-ninja`.
+#### v1.1 Extended State Machine
+
+```
+'start' --[tap]--> 'buying' --[timer]--> 'transition' --[auto]--> 'selling' --[timer]--> 'over'
+   ^                                                                                        |
+   +-----------------------------------[tap Rejouer]---------------------------------------+
+```
+
+**New states:**
+| State | Replaces | Purpose | Duration |
+|-------|----------|---------|----------|
+| `'buying'` | `'playing'` | Act 1: Buy watches, avoid fakes (existing gameplay) | ~40s |
+| `'transition'` | (new) | Brief screen showing inventory tally before Act 2 | ~3s auto-advance |
+| `'selling'` | (new) | Act 2: Judge buyer offers on your inventory | ~30s |
+
+**Implementation pattern -- extend the existing if/else chain:**
+
+```javascript
+var gameState = 'start'; // 'start' | 'buying' | 'transition' | 'selling' | 'over'
+var act = 1; // Track which act for shared logic
+
+function gameLoop(timestamp) {
+  // ... existing dt calculation ...
+  if (gameState === 'start') { renderStart(dt); }
+  else if (gameState === 'buying') { updateBuying(dt); renderBuying(dt); }
+  else if (gameState === 'transition') { updateTransition(dt); renderTransition(dt); }
+  else if (gameState === 'selling') { updateSelling(dt); renderSelling(dt); }
+  else if (gameState === 'over') { renderGameOver(); }
+  requestAnimationFrame(gameLoop);
+}
+```
+
+#### Why NOT Use a State Machine Library
+
+| Library | Verdict | Rationale |
+|---------|---------|-----------|
+| XState | REJECT | 40KB+ minified. Designed for complex concurrent state charts. This game has 5 sequential states with no concurrency. |
+| javascript-state-machine | REJECT | 8KB+. Adds event-driven transitions, callbacks, lifecycle hooks. Overkill for 5 states controlled by timers. |
+| Machina.js | REJECT | Similar -- formal FSM for complex state management. Wrong scale. |
+
+The existing if/else pattern in `gameLoop` is the right abstraction for 5 states. Adding a library would require learning its API, adapting the existing code, and adding a dependency -- all for zero benefit.
+
+#### State Transition Data Flow
+
+The key architectural question is: **what data passes from Act 1 (buying) to Act 2 (selling)?**
+
+```javascript
+var inventory = []; // Watches bought in Act 1, carried to Act 2
+
+// During 'buying' phase, slashing a real watch adds it:
+function slashWatch(watch) {
+  if (!watch.isFake) {
+    inventory.push({
+      brand: watch.brand,
+      style: watch.style,
+      value: watch.value,
+      isGolden: watch.isGolden
+    });
+  }
+  // ... existing slash logic
+}
+
+// During 'transition', display inventory count
+// During 'selling', use inventory to generate buyer offer scenarios
+```
+
+**Confidence:** HIGH -- this is a straightforward extension of existing patterns in the codebase.
+
+#### Timer Architecture for Two Acts
+
+The existing `elapsed` and `ROUND_DURATION` variables handle one timer. For two acts, **reset the timer between acts:**
+
+```javascript
+var ACT1_DURATION = 40; // seconds
+var TRANSITION_DURATION = 3;
+var ACT2_DURATION = 30;
+
+function updateBuying(dt) {
+  elapsed += dt;
+  if (elapsed >= ACT1_DURATION) {
+    gameState = 'transition';
+    elapsed = 0; // Reset for transition timer
+  }
+  // ... existing update logic
+}
+
+function updateTransition(dt) {
+  elapsed += dt;
+  if (elapsed >= TRANSITION_DURATION) {
+    gameState = 'selling';
+    elapsed = 0; // Reset for Act 2 timer
+  }
+}
+```
 
 ---
 
-## Performance Budget
+## What NOT to Add (and Why)
 
-For a simple arcade game on mobile Chrome:
+| Temptation | Why Resist |
+|------------|-----------|
+| Phaser or PixiJS for "card rendering" | Canvas 2D `roundRect()` + offscreen cache handles cards perfectly. A framework adds 500KB-1MB for a feature that takes 20 lines of vanilla code. |
+| Howler.js for audio | Web Audio API is native, zero-dependency, and supports everything this game needs. Howler.js would be the first npm dependency. |
+| XState for state machine | 5 sequential states. An if/else chain is clearer and has zero learning curve. |
+| ES modules / file splitting | The game is 1381 lines in one file. Adding 3 sound functions, card rendering, and new states will bring it to ~1800-2000 lines. Still manageable in one file. Split only if it crosses ~2500 lines. |
+| Image sprites for cards | Canvas-drawn cards match the existing aesthetic (v1.0 watches are all Canvas primitives). Loading PNGs would add assets to deploy and break the visual consistency. |
+| Audio sprite sheet (.mp3 with multiple sounds) | Procedural generation is simpler and more flexible than managing a single audio file with timestamp offsets. |
+| npm / webpack / vite | Still a single `game.js` file. Build tools add complexity for zero benefit at this scale. |
 
-| Metric | Target | How |
-|--------|--------|-----|
-| Total asset size | < 2MB | Small PNG sprites (~50KB each), no video, optional small audio files |
-| JS bundle size | < 50KB | Vanilla JS, no libraries. Likely under 10KB for this game. |
-| Frame rate | 60fps | Canvas 2D handles 50+ sprites trivially. Use `requestAnimationFrame`. |
-| Load time | < 1 second | Static files from nginx, no API calls, no dynamic imports |
-| Time to interactive | Instant | No framework initialization, no hydration, no VDOM diffing |
+---
+
+## Integration Points with Existing Codebase
+
+| v1.1 Feature | Touches These Existing Functions | Integration Approach |
+|--------------|--------------------------------|---------------------|
+| Vinted cards | `drawWatch()`, `drawRoundWatch()`, `drawSquareWatch()`, `drawSportWatch()`, `drawBrandLabel()`, `renderHalf()` | Replace `drawWatch()` with `drawCard()`. Keep old draw functions for the mini-illustration inside the card. Update `renderHalf()` to clip cards instead of circles. |
+| Sound effects | `slashWatch()`, `spawnWatch()` (miss penalty), `update()` (game over) | Add `playSlash()` call in `slashWatch()`. Add `playCoin()` on positive score. Add `playPenalty()` on fake slash or miss. |
+| AudioContext init | `handleStartTap()`, `handleReplayTap()` | Add `initAudio()` call at the top of both handlers. |
+| Buy/sell states | `gameState` variable, `gameLoop()`, `update()`, `startGame()`, `resetGame()` | Rename `'playing'` to `'buying'`. Add `'transition'` and `'selling'` states. Split `update()` into `updateBuying()` / `updateSelling()`. |
+| Inventory | `slashWatch()` | Push to `inventory[]` array when slashing real watches during buying phase. |
+| Transition screen | (new function) | New `renderTransition()` function, similar to `renderStart()` layout. |
+| Sell phase gameplay | (new functions) | New `updateSelling()` and `renderSelling()` functions with different mechanics. |
+
+---
+
+## Performance Impact Assessment
+
+| Addition | CPU Cost | Memory Cost | Frame Budget Impact |
+|----------|----------|-------------|-------------------|
+| Offscreen card cache | One-time ~2ms per card variant | ~6 small canvases (~50KB total) | Reduces per-frame cost vs. drawing cards from scratch |
+| `drawImage()` per card | ~0.1ms per card | Negligible | 20 cards = 2ms, well within 16ms budget |
+| Web Audio oscillators | Negligible (native audio thread) | ~1KB per active sound | Zero impact on render thread |
+| Extra game states | Negligible (one string comparison) | ~100 bytes for inventory array | Zero impact |
+| Brand text on white card | Less expensive than current (no stroke outline needed) | None | Slight improvement over v1.0 |
+
+**Total v1.1 performance impact:** Neutral to slightly positive. Pre-rendering cards to offscreen canvas may actually improve frame times compared to the current per-frame watch drawing.
+
+---
+
+## Sources
+
+| Source | Confidence | Used For |
+|--------|------------|----------|
+| [MDN CanvasRenderingContext2D.roundRect()](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/roundRect) | HIGH | Native roundRect API, browser support |
+| [Can I Use roundRect](https://caniuse.com/mdn-api_canvasrenderingcontext2d_roundrect) | HIGH | Browser version numbers, 94.74% global support |
+| [MDN Optimizing Canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas) | HIGH | Offscreen canvas caching, shadowBlur perf warning |
+| [web.dev Canvas Performance](https://web.dev/articles/canvas-performance) | HIGH | Pre-rendering patterns, batch drawing |
+| [MDN Audio for Web Games](https://developer.mozilla.org/en-US/docs/Games/Techniques/Audio_for_Web_Games) | HIGH | Web Audio vs HTML5 Audio comparison, mobile restrictions |
+| [Chrome Web Audio Autoplay Policy](https://developer.chrome.com/blog/web-audio-autoplay) | HIGH | User gesture requirement, AudioContext.resume() |
+| [MDN Web Audio API Best Practices](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices) | HIGH | AudioContext creation timing |
+| [MDN OscillatorNode](https://developer.mozilla.org/en-US/docs/Web/API/OscillatorNode) | HIGH | Procedural sound generation API |
+| [web.dev Developing Game Audio](https://web.dev/webaudio-games/) | HIGH | Game audio architecture patterns |
+| [Chrome Autoplay Policy](https://developer.chrome.com/blog/autoplay) | HIGH | Mobile autoplay restrictions |
+| Existing `game.js` source (1381 lines) | HIGH | Integration points, current patterns |
 
 ---
 
 ## Summary Decision Matrix
 
-| Decision | Choice | Confidence |
-|----------|--------|------------|
-| Rendering | HTML5 Canvas 2D | HIGH |
-| Language | Vanilla JS (ES2020+, ES modules) | HIGH |
-| Touch input | Pointer Events API | HIGH |
-| Game framework | None (vanilla) | HIGH |
-| Audio | HTML5 `<audio>`, Web Audio API if needed | HIGH |
-| Build tools | None | HIGH |
-| Asset format | PNG sprites, Canvas-drawn effects | HIGH |
-| Hosting | nginx:alpine in Docker | HIGH |
-| CSS framework | None (inline/minimal CSS) | HIGH |
+| Decision | Choice | New Dependency? | Confidence |
+|----------|--------|----------------|------------|
+| Card rendering | Canvas 2D `roundRect()` + offscreen cache | No (native API) | HIGH |
+| Card shadows | Pre-rendered to offscreen canvas | No (native API, perf pattern) | HIGH |
+| Card text | `ctx.fillText()` on white background | No (existing API) | HIGH |
+| Watch illustration in cards | Existing Canvas draw functions, scaled | No | HIGH |
+| Audio engine | Web Audio API (`AudioContext`) | No (native API) | HIGH |
+| Sound generation | Procedural (oscillators + gain envelopes) | No (native API) | HIGH |
+| AudioContext init | On first user tap (start/replay button) | No | HIGH |
+| State machine | Extend `gameState` string with new states | No | HIGH |
+| State machine library | None (if/else chain for 5 states) | No | HIGH |
+| Audio files | None (procedural first, .mp3 fallback if needed) | Optional | HIGH |
+| New npm packages | Zero | No | HIGH |
 
----
-
-## Sources and Confidence Notes
-
-**Confidence rationale:** This recommendation carries HIGH confidence despite being based on training data rather than live verification because:
-
-1. **HTML5 Canvas 2D API** has been stable and unchanged since 2015+. It is a W3C standard. No version to check.
-2. **Pointer Events API** has been stable and supported in all major browsers since 2019+. It is a W3C standard.
-3. **ES modules in browsers** have been supported in Chrome since 2017 (Chrome 61+).
-4. **`touch-action` CSS property** has been supported in all major browsers since 2017+.
-5. **None of the recommendations depend on a specific library version** -- the entire stack is built on native browser APIs that do not change.
-
-The only area where version verification would matter is the "Libraries Rejected" section, and since the recommendation is to use zero libraries, version drift is irrelevant.
-
-**What I could not verify (tools were restricted):**
-- Exact latest versions of Phaser, PixiJS, Kaplay, and other libraries (listed approximate versions from training data)
-- Whether any new lightweight game library has emerged in late 2025/early 2026
-- Whether any browser API changes affect Canvas 2D performance on recent Chrome versions
-
-**Assessment of risk from unverified items:** LOW. The native browser APIs recommended here have been stable for 5+ years. A new game library emerging would not change the recommendation -- for a < 1 week joke game, vanilla JS remains the right call regardless.
+**v1.1 adds zero dependencies. All features use native browser APIs.**

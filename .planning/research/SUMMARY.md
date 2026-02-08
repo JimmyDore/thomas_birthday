@@ -1,380 +1,247 @@
 # Project Research Summary
 
-**Project:** Watch Ninja (Fruit Ninja-style birthday game)
-**Domain:** HTML5 Canvas mobile browser arcade game
-**Researched:** 2026-02-07
+**Project:** Watch Ninja v1.1 — Vinted Cards, Buy/Sell, Sound Effects
+**Domain:** Canvas 2D arcade game enhancement (visual redesign + multi-phase gameplay + audio)
+**Researched:** 2026-02-08
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Watch Ninja is a Fruit Ninja-style arcade game for mobile browsers, themed around Thomas's Vinted watch-flipping hobby. Research shows this should be built as a **pure vanilla JavaScript project with HTML5 Canvas 2D** — zero dependencies, zero build tools. The game's scope (single 60-90 second round, birthday joke for one person) means every library is overhead that slows delivery without proportional benefit.
+Watch Ninja v1.1 adds three independent features to a deployed, working Canvas 2D mobile game: replacing circular watches with Vinted-style listing cards for readability, extending the single-round gameplay into a two-act buy-then-sell structure, and adding procedurally-generated sound effects. Research shows these features integrate cleanly into the existing 1381-line vanilla JavaScript architecture without requiring new dependencies or architectural changes.
 
-The recommended approach is dead simple: HTML5 Canvas for rendering, Pointer Events API for touch input, `requestAnimationFrame` for the game loop, and nginx in Docker for deployment. Total development time: 2-3 days to a polished, shippable birthday game. The architecture follows standard Canvas game patterns that have been stable for a decade: entity list with spawn/despawn, swipe trail as line segments, state machine for screens, and line-to-circle hit detection.
+The recommended approach leverages native browser APIs exclusively: Canvas 2D `roundRect()` with offscreen canvas caching for card rendering (eliminating the expensive shadow/text rendering on every frame), Web Audio API with procedural oscillator-based sound generation (zero audio files needed), and extension of the existing string-based state machine from 3 states to 5 states. The card redesign solves the core readability problem by moving brand names from 11px text on rotating watch dials to 14-16px bold text on white card backgrounds. The two-act structure reuses the existing physics, collision detection, and slash mechanics with different entity types and scoring semantics in Act 2.
 
-The critical risks are all mobile-specific pitfalls: preventing touch scroll/zoom interference, handling device pixel ratio for sharp rendering, and using line-segment intersection (not point-in-rect) for slash detection. All are easily avoided if addressed from the start in Phase 1 foundation work. The biggest UX risk is missing the "game feel" details — slash trails, split animations, feedback text — that make Fruit Ninja satisfying. These belong in Phase 2 core gameplay, not deferred to polish.
+Key risks are mobile-specific: AudioContext requires explicit user-gesture unlock (the "Jouer" button tap is the perfect hook point), card rendering performance requires offscreen canvas pre-rendering (not per-frame drawing), and the state machine expansion requires careful auditing of every `gameState` check to avoid impossible states. All three features can be built independently and tested in isolation before integration, minimizing compound risk.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Zero dependencies. Vanilla JS + Canvas 2D + nginx.**
-
-For a birthday joke game that ships in under a week, every library is a liability. HTML5 Canvas 2D provides all rendering needs natively (sprites, bezier curves, particles). Mobile Chrome supports all modern ES2020+ features without transpilation. The entire stack is browser APIs that have been stable for 5+ years.
+All three features use native browser APIs with no new dependencies. The existing "zero dependencies, zero build tools" constraint is maintained.
 
 **Core technologies:**
-- **HTML5 Canvas 2D Context (native):** Render watches, slashes, particles, score — zero dependencies, universal mobile Chrome support, perfect for 2D sprite games
-- **Vanilla JS ES2020+ (native):** All game logic and input handling — ship `.js` files directly, no build tools, no transpilation
-- **Pointer Events API (native):** Unified touch/mouse API for swipe detection — simpler than Touch Events, works across devices, makes desktop testing easy
-- **nginx:alpine in Docker:** Serve static files — already specified in project requirements, no server-side logic needed
-- **HTML5 `<audio>` elements (optional):** Sound effects if desired — simplest option, though PROJECT.md marks audio as out of scope
+- **Canvas 2D `roundRect()`**: Native API for card shape (94.74% global support, Chrome 99+, Safari 16+) — replaces manual bezier helper with one-line native method
+- **Offscreen canvas caching**: Pre-render cards once to offscreen canvas, stamp with `drawImage()` per frame — reduces 25+ draw calls per card to 1 `drawImage()` call
+- **Web Audio API with procedural synthesis**: Generate all sound effects with oscillators + gain envelopes — zero audio files, zero loading complexity, consistent with project's handcrafted aesthetic
+- **Extended string-based state machine**: Add `'buying'`, `'transition'`, `'selling'` states to existing `gameState` variable — scales cleanly from 3 to 5 states without introducing state library
 
-**Critical mobile configuration (often missed):**
-- Viewport meta tag: `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no`
-- Canvas CSS: `touch-action: none` to prevent scroll/zoom on swipes
-- Body CSS: `overflow: hidden; position: fixed` to prevent iOS bounce scroll
-- Canvas sizing: Handle `devicePixelRatio` for sharp rendering on high-DPI screens
+**Critical version requirements:** None. All APIs are baseline available in mobile Chrome (target browser).
 
-**Rejected alternatives:**
-- Game frameworks (Phaser, PixiJS, Kaplay) — 200KB-2MB overhead for features this game never uses
-- TypeScript — adds build step for minimal type safety benefit in a 500-line joke game
-- WebGL — overkill for 2D sprites; Canvas 2D handles 50+ sprites at 60fps trivially
-- Build tools (Webpack, Vite) — unnecessary when shipping native ES modules
+See [STACK.md](./STACK.md) for implementation patterns and code examples.
 
 ### Expected Features
 
-**Table stakes (must have — these 10 features define Fruit Ninja):**
-- Objects flying across screen in parabolic arcs (random launch from bottom)
-- Swipe-to-slash gesture with touch input
-- Slash trail visual following finger (fades after 300ms)
-- Object split animation (halves tumble with physics and rotation)
-- Score display (for Watch Ninja: profit in euros, prominently shown)
-- Game timer (60-90 seconds) or life system (timer is simpler for a joke game)
-- Game over screen with final score and birthday message
-- Start screen with title and play button
-- Increasing difficulty over time (spawn rate and speed ramp up)
-- Bomb/penalty mechanic (for Watch Ninja: fake watches you must NOT slash)
+The card redesign, two-act mechanic, and sound effects are well-defined feature sets with clear precedents.
 
-**Differentiators (watch-theme humor — these ARE the joke):**
-- Real vs fake watch identification (Montignac vs Montignak/Montinyac)
-- Euro profit scoring ("+50 EUR — Bonne affaire!" / "-20 EUR — Arnaque!")
-- Progressively sneakier fake names (difficulty curve through the humor itself)
-- Personalized birthday message on game over ("Joyeux anniversaire Thomas!")
-- "Bonne affaire!" / "Arnaque!" slash feedback text (flies up on each slash)
-- Watch images/sprites with readable brand labels
-- Special golden watch (rare Rolex bonus worth +200 EUR)
-- Vinted seller rating on game over (humor: "Thomas — Vendeur Pro" or "Arnaqueur")
+**Must have (table stakes):**
+- **White rounded-rectangle Vinted cards** — defines the visual identity, without this it doesn't read as a Vinted listing
+- **Large readable brand name on cards** — THE critical readability fix, minimum 14-16px font on white background
+- **Card splits in half on slash** — existing animation must adapt to rectangular cards (vertical or horizontal clip)
+- **Clear act transition screen** — player must know when Act 1 ends and Act 2 begins (2-3 second interstitial)
+- **Slash swoosh + hit/coin/penalty sounds** — core audio feedback for every slash action
+- **AudioContext unlock on first user tap** — mobile browsers block autoplay, "Jouer" button tap unlocks audio
 
-**Anti-features (deliberately NOT building):**
-- Persistent progression / unlockables — no one grinds a birthday joke game
-- Leaderboard / online high scores — single-player, at most localStorage
-- Multiple game modes — one timed mode is correct for a joke
-- Sound effects and music — marked out of scope in PROJECT.md
-- Tutorial / onboarding — everyone knows how Fruit Ninja works
-- Pause menu / settings — 60-90 seconds needs no pause
-- Responsive desktop layout — mobile-only per PROJECT.md
-- Complex physics engine (Matter.js, etc.) — hand-code gravity in 20 lines
-- Internationalization — hardcode French strings for Thomas
-- Analytics / telemetry — it's a birthday joke, not a SaaS product
+**Should have (competitive):**
+- **Offscreen card caching** — performance requirement for 4-6 cards on screen simultaneously
+- **Procedural sound generation** — avoids file loading complexity, fits arcade aesthetic
+- **Act 2 independent difficulty curve** — selling phase needs different pacing than buying phase
+- **Buyer character names in Act 2** — French parody names add comedy value ("Jean-Michel", "Kevin-le-Kiffeur")
+- **Combo pitch escalation** — each consecutive slash plays at slightly higher pitch (musical satisfaction)
 
-**MVP timeline:**
-- Phase 1 (playable game): 1-2 days
-- Phase 2 (polished joke): 0.5-1 day
-- Total to shippable: 2-3 days
+**Defer (v2+):**
+- **Heart icon or Vinted watermark on cards** — purely decorative polish
+- **Background music loop** — adds significant complexity for a 90-second game
+- **Volume settings UI** — no settings screen exists, defer unless needed
+- **Pre-recorded audio files** — procedural first, only switch if sounds feel wrong in playtesting
+
+See [FEATURES.md](./FEATURES.md) for detailed feature analysis and Vinted card layout specifications.
 
 ### Architecture Approach
 
-**Standard HTML5 Canvas game architecture with minimal structure.**
-
-For a birthday joke game, single-file or minimal-file structure is ideal. The game is simple enough for hand-rolled vanilla patterns without framework overhead. Use `requestAnimationFrame` game loop with delta-time, entity list with spawn/despawn, swipe trail as line segments, and state machine for three screens (splash, playing, game-over).
+The existing single-file architecture (1381 lines, zero modules) supports all three features through additive extension. Card rendering replaces draw functions. State machine adds states. Audio adds a new subsystem that hooks into existing event points.
 
 **Major components:**
-1. **Game Loop** — `requestAnimationFrame` callback drives everything at ~60fps with delta-time calculation for frame-rate independence
-2. **Input Handler** — Pointer Events API captures swipe as series of (x, y, timestamp) points for collision detection
-3. **Physics Engine** — Simple Euler integration for gravity and parabolic arcs (`vy += gravity * dt; y += vy * dt`)
-4. **Game Logic** — Spawns watches on timer, detects line-segment-to-circle collisions between swipe trail and watch hitboxes, updates score
-5. **Renderer** — Each frame: clear canvas, draw background, entities (back-to-front), slash trail, UI overlay
-6. **State Machine** — Three states (SPLASH, PLAYING, GAME_OVER) with separate update/render for each
-7. **Entity List** — Flat array of watch objects with spawn/despawn lifecycle, cleanup for off-screen entities
 
-**Architectural patterns:**
-- **Fixed (variable) timestep game loop:** Simple variable-timestep is acceptable for forgiving parabolic physics (no rigid body collision)
-- **Entity spawning:** Plain array of objects, add on timer, remove when off-screen or slashed
-- **Swipe trail as line segments:** Check intersection between consecutive points and entity circles (not point-in-rect)
-- **State machine:** Prevents spaghetti code as screens grow, even for 3 screens
+1. **Card rendering system** — replaces `drawRoundWatch/drawSquareWatch/drawSportWatch` (200+ lines) with single `drawCard()` function; pre-renders to offscreen canvas on spawn; uses `drawImage()` for per-frame stamping; adapts `renderHalf()` to clip rectangular cards
 
-**Project structure (recommended):**
-```
-/
-├── index.html          # HTML + CSS + JS in one file (or split if >500 lines)
-├── game.js             # (optional split) All game logic
-├── assets/             # (optional) Watch PNGs if not drawn with Canvas
-├── Dockerfile          # nginx:alpine static serve
-├── nginx.conf          # SSL + domain config
-└── .github/workflows/  # CI/CD
-```
+2. **Two-act state machine** — extends `gameState` from `'start' -> 'playing' -> 'over'` to `'start' -> 'buying' -> 'transition' -> 'selling' -> 'over'`; adds `inventory[]` array to carry watches from Act 1 to Act 2; reuses physics/collision/trail for Act 2 with new entity type (buyer offers) and scoring logic
 
-**File organization rationale:** Single file is fastest to ship. Only split if `index.html` exceeds 500 lines. No `src/` folder, no build step, no module bundler. Open `index.html` and it works.
+3. **Audio subsystem** — creates `AudioContext` on first user tap; generates sounds procedurally with `OscillatorNode` + `GainNode`; hooks into 8-10 game events (slash, coin, penalty, jackpot, combo, transition); no file loading, no audio sprites
+
+**Key architectural insights:**
+- Act 1 (`'buying'`) IS the current game, just renamed and shortened to ~35 seconds
+- Act 2 (`'selling'`) reuses 100% of physics, trail, collision, particles — only entity draw function and scoring logic differ
+- Audio is purely additive — can be dropped entirely without affecting gameplay
+- Estimated new code: ~320 lines, bringing file to ~1700 lines (still single-file viable)
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for integration points, data flow, and reuse analysis.
 
 ### Critical Pitfalls
 
-Research identified 11 critical pitfalls. Top 5 by impact:
+Research identified 16 domain pitfalls. Top 5 most critical:
 
-1. **Touch events trigger scroll/zoom/browser chrome** — Swipes scroll the page instead of slashing watches. The game feels broken on first touch on a real phone despite working in DevTools. **Prevention:** `touch-action: none` CSS, `event.preventDefault()` in touch handlers, proper viewport meta tag, `overflow: hidden` on body. **Phase:** Foundation (Phase 1).
+1. **AudioContext suspended on mobile** — Chrome requires explicit `audioCtx.resume()` inside user gesture event handler; create AudioContext inside "Jouer" button tap handler or game has zero audio on mobile with no error message
 
-2. **Canvas not sized for device pixel ratio** — Text and sprites render blurry on high-DPI mobile screens (all modern phones). Looks amateur despite correct logic. **Prevention:** Set `canvas.width/height = cssSize * devicePixelRatio`, call `ctx.scale(dpr, dpr)`. **Phase:** Foundation (Phase 1).
+2. **Card split animation looks broken** — current vertical clip assumes symmetric circular watches; rectangular cards with text/image layout split mid-character looking like torn UI; must redesign split alongside card renderer (horizontal clip or offscreen canvas + source-rect approach)
 
-3. **Hit detection uses point-in-rect instead of swipe path intersection** — Fast swipes miss watches because no single touch sample lands inside the hitbox. Game punishes natural Fruit Ninja fast-slash gesture. **Prevention:** Check LINE SEGMENT to CIRCLE intersection between consecutive touch points, not point-in-rect. **Phase:** Core Gameplay (Phase 2).
+3. **State machine expansion creates impossible states** — extending from 3 to 5 states requires auditing EVERY `gameState` check in game loop, input handlers, rendering; missing one creates dead code paths; use `isPlaying()` helper instead of changing every `=== 'playing'` check
 
-4. **No swipe trail visual** — Player sees no feedback that input was registered. Game feels laggy even if hit detection works. **Prevention:** Draw fading trail connecting recent touch points each frame. Implement BEFORE hit detection — visual feedback is more important than accuracy. **Phase:** Core Gameplay (Phase 2).
+4. **Inventory corruption during act transition** — pushing watch object references into inventory array means Act 2 mutations corrupt Act 1 data; must clone data: `inventory.push({ brand: w.brand, value: w.value, isGolden: w.isGolden })`
 
-5. **Game loop tied to setInterval instead of requestAnimationFrame** — Inconsistent frame timing, stuttery animations, battery drain. Game runs at unpredictable speeds. **Prevention:** Use `requestAnimationFrame` exclusively, calculate delta-time, make all movement use `velocity * dt`. **Phase:** Foundation (Phase 1).
+5. **Card rendering performance regression** — 25+ draw calls per card (roundRect, shadow, text, illustrations) multiplied by 6 cards = 150+ calls per frame; pre-render to offscreen canvas ONCE on spawn, stamp with `drawImage()` each frame (1 call per card)
 
-**Other critical pitfalls:**
-- Touch coordinate mapping ignores canvas offset (Phase 1)
-- Spawning objects without considering mobile portrait proportions (Phase 2)
-- Memory leaks from unbounded object arrays (Phase 2)
-- 300ms touch delay on older mobile browsers (Phase 1 — solved by viewport meta tag)
-- Canvas clearing strategy causes flicker or ghost trails (Phase 1)
-- Image loading race condition on game start (Phase 1 — needs simple preloader)
-
-**UX pitfalls (game works but feels bad):**
-- No visual feedback on successful slash (add split halves, score popup, particles)
-- Score text positioned where thumb covers it (place at top-center)
-- No distinction between real and fake watches (make them visibly different)
-- Game starts immediately on page load (needs start screen)
-- No game-over state or replay option (this IS the punchline — don't skip it)
+See [PITFALLS.md](./PITFALLS.md) for all 16 pitfalls with detection criteria and recovery strategies.
 
 ## Implications for Roadmap
 
-Based on architecture dependencies and pitfall prevention, suggested phase structure:
+Based on research, suggested phase structure reflects feature independence and risk isolation:
 
-### Phase 1: Foundation & Game Loop
-**Rationale:** Everything depends on canvas setup and game loop. Cannot test any gameplay until this exists. Critical mobile pitfalls (touch scroll, DPR, coordinate mapping) must be solved upfront or they waste time during development.
+### Phase 1: Card Visual Redesign
+**Rationale:** Pure visual change with zero gameplay impact — can be tested in isolation before touching state machine or audio. Highest-risk rendering change (replacing 200+ lines of drawing code) should be validated early.
 
 **Delivers:**
-- HTML/CSS boilerplate with proper viewport meta, touch-action CSS, responsive canvas
-- Canvas setup with devicePixelRatio handling (sharp rendering)
-- `requestAnimationFrame` game loop with delta-time calculation
-- Touch input capture with proper coordinate mapping and preventDefault
-- State machine scaffold (SPLASH, PLAYING, GAME_OVER states)
-- Image preloader (even if using simple graphics — prevents race conditions)
+- Vinted card shape with `roundRect()`, shadow, white background
+- Watch illustration repositioned inside card top section
+- Large readable brand name (14-16px) below illustration
+- Price tag display
+- Offscreen canvas caching for performance
+- Updated split-half animation for rectangular cards
+- Adjusted hitbox (circular approximation or rect collision)
 
-**Addresses features:**
-- Foundation for all table stakes
-- Prevents touch scroll/zoom interference (Pitfall 1)
-- Prevents blurry rendering (Pitfall 2)
-- Prevents setInterval timing issues (Pitfall 5)
-- Prevents touch coordinate bugs (Pitfall 6)
-- Prevents image loading race (Pitfall 11)
+**Addresses:**
+- Card rendering from FEATURES.md (white card, brand name, price tag, split animation)
+- Performance requirement (offscreen caching pattern from STACK.md)
 
-**Avoids pitfalls:**
-- All Phase 1 pitfalls from PITFALLS.md
-- Sets up proper patterns before bad habits form
+**Avoids:**
+- Pitfall 1 (split animation breaks) — redesign split alongside card renderer
+- Pitfall 4 (hit detection shape mismatch) — tune hitbox radius with card dimensions
+- Pitfall 6 (text unreadable) — validate 14-16px minimum font size
+- Pitfall 9 (performance regression) — offscreen canvas from day one
 
-**Time estimate:** 0.5-1 day
+**Research flag:** Standard Canvas 2D patterns — skip phase research. MDN docs + existing codebase sufficient.
 
 ---
 
-### Phase 2: Core Gameplay Mechanics
-**Rationale:** With foundation in place, build the satisfying Fruit Ninja loop: watches fly, player swipes, watches split. This is where "game feel" lives. Slash trail and split animation are NOT polish — they're core satisfaction mechanics that must be tuned before moving to game flow.
+### Phase 2: Sound Effects
+**Rationale:** Independent of visual and gameplay changes — can be built and tested without touching card rendering or state machine. Second because it enhances Phase 1 results immediately (cards now slash with audio feedback).
 
 **Delivers:**
-- Entity spawning system (watches launch from bottom in parabolic arcs)
-- Physics update (gravity, velocity, rotation)
-- Rendering watches (circles, simple graphics, or PNGs)
-- Swipe trail rendering (fading line following finger) — MUST come before hit detection
-- Line-segment-to-circle collision detection (slash intersects watch)
-- Watch split animation (two halves tumble with rotation and outward velocity)
-- Real vs fake watch types (Montignac vs Montignak, euro values)
-- Score system (profit in euros, updates on slash)
-- Particle effects on slash (small burst for juice)
+- AudioContext initialization with mobile-safe user gesture unlock
+- Procedural sound generation functions (oscillator + gain envelope)
+- Core sounds: slash swoosh, hit impact, coin cha-ching, penalty buzz
+- Optional premium sounds: golden jackpot jingle, combo milestone ding
+- Integration hooks in `slashWatch()`, `updateWatches()`, state transitions
+- Sound pool limiter (max 2-3 concurrent per sound type)
 
-**Addresses features:**
-- Objects flying across screen (table stakes)
-- Swipe-to-slash gesture (table stakes)
-- Slash trail visual (table stakes)
-- Object split animation (table stakes — this IS the satisfaction)
-- Score display (table stakes)
-- Real vs fake watch identification (differentiator)
-- Euro profit scoring (differentiator)
+**Uses:**
+- Web Audio API (AudioContext, OscillatorNode, GainNode) from STACK.md
+- Procedural synthesis patterns from STACK.md (sawtooth for slash, sine for coin, square for penalty)
 
-**Avoids pitfalls:**
-- No swipe trail = feels unresponsive (Pitfall 5)
-- Point-in-rect hit detection = fast swipes miss (Pitfall 3)
-- Mobile portrait spawn proportions (Pitfall 7)
-- Memory leaks from unbounded arrays (Pitfall 8)
+**Avoids:**
+- Pitfall 2 (AudioContext suspended) — unlock in "Jouer" button tap handler
+- Pitfall 7 (decode lag) — procedural generation has zero decode time
+- Pitfall 10 (overlapping sounds distort) — sound pool with concurrent instance limit
 
-**Uses stack:**
-- Canvas 2D drawing (arcs, lines, bezier curves for trail)
-- Pointer Events API (swipe capture)
-- Simple physics (no library needed)
-
-**Time estimate:** 1-1.5 days
+**Research flag:** Standard Web Audio patterns — skip phase research. MDN docs cover all use cases.
 
 ---
 
-### Phase 3: Game Flow & Timer
-**Rationale:** With satisfying core mechanics, add the structure that makes it a complete game: start screen, timer countdown, difficulty ramp, game over. These are conditional rendering and state transitions — straightforward once core loop works.
+### Phase 3: Two-Act Buy/Sell Mechanic
+**Rationale:** Most complex feature — requires state machine expansion, inventory data structure, Act 2 entity type, transition screen, and independent difficulty tuning. Last because it depends on card rendering being stable (Act 2 renders offer cards) and benefits from sound being available (Act 2 interactions have audio feedback).
 
 **Delivers:**
-- Start screen (title, "Jouer" button, maybe swipe-to-start watch)
-- Countdown timer (60-90 seconds displayed on HUD)
-- Difficulty ramping (spawn rate and speed increase over time)
-- Game over detection (timer expires)
-- Game over screen with final profit, birthday message, restart button
-- Screen transitions (SPLASH → PLAYING → GAME_OVER)
+- Extended state machine: `'buying'`, `'transition'`, `'selling'` states
+- Inventory array populated during Act 1, consumed during Act 2
+- Act 1 timer shortened to ~35 seconds (existing gameplay, renamed)
+- Transition screen (2-3 second auto-advance, shows inventory count)
+- Act 2 entity type: buyer offers (name + price on card-like layout)
+- Act 2 scoring: slash good offers (profit), avoid lowballs (penalty)
+- Independent Act 2 difficulty curve
+- Combined game-over screen with two-act stats
+- Updated `resetGame()` to clear all new state
 
-**Addresses features:**
-- Game timer (table stakes)
-- Start screen (table stakes)
-- Game over screen with final score (table stakes)
-- Increasing difficulty over time (table stakes)
-- Birthday message (differentiator — this IS the punchline)
+**Implements:**
+- State machine extension from ARCHITECTURE.md
+- Inventory data flow from ARCHITECTURE.md
+- Offer card rendering (variant of Phase 1 card renderer)
+- Act 2 physics reuse (same updateWatches, collision, trail)
 
-**Implements architecture:**
-- State machine transitions
-- Timer-based game logic
+**Avoids:**
+- Pitfall 3 (impossible states) — audit all gameState checks, use isPlaying() helper
+- Pitfall 5 (inventory corruption) — clone data into inventory, never share references
+- Pitfall 8 (Act 2 pacing identical) — independent difficulty function for Act 2
+- Pitfall 14 (resetGame incomplete) — audit resets after every new variable
 
-**Time estimate:** 0.5 day
-
----
-
-### Phase 4: Polish & Humor
-**Rationale:** The game is now playable. Add the watch-theme-specific humor and visual polish that make it personal for Thomas. These are quick wins that maximize the joke impact.
-
-**Delivers:**
-- Progressively sneakier fake watch names (Montignak → Montinyac → Montiganc)
-- "Bonne affaire!" / "Arnaque!" floating text on slash
-- Watch sprites with readable brand labels (vs plain circles)
-- Special golden Rolex watch (rare, high value bonus)
-- Vinted seller rating on game over screen
-- Screen shake on penalty slash
-- Generous hit detection tuning (slightly larger hitboxes)
-- Final birthday message polish
-
-**Addresses features:**
-- Progressively sneakier fake names (differentiator)
-- Slash feedback text (differentiator)
-- Watch images with labels (differentiator)
-- Special watches (differentiator)
-- Vinted rating (differentiator)
-
-**Time estimate:** 0.5-1 day
-
----
-
-### Phase 5: Deployment
-**Rationale:** Game is complete and tested. Ship it to VPS with HTTPS on custom domain.
-
-**Delivers:**
-- Dockerfile with nginx:alpine
-- nginx.conf with SSL
-- GitHub Actions CI/CD pipeline
-- Custom domain DNS + Let's Encrypt SSL
-- OG meta tags for nice link preview when sharing
-
-**Uses stack:**
-- nginx, Docker (per PROJECT.md requirements)
-
-**Time estimate:** 0.5 day (could be parallel with Phase 4)
+**Research flag:** Novel game mechanic combination (Fruit Ninja + Recettear) — consider `/gsd:research-phase` for Act 2 scoring/pacing if design feels unclear during planning. State machine extension and inventory are standard patterns.
 
 ---
 
 ### Phase Ordering Rationale
 
-**Why this order:**
-1. **Foundation first** because everything draws to canvas and runs in the loop. No testing possible without this.
-2. **Core gameplay before game flow** because you need to see watches flying and slashing working before wrapping it in menus. Visual feedback keeps development on track.
-3. **Slash trail before hit detection** because perceived responsiveness (visual feedback) matters more than accuracy. A visible trail makes imperfect collision feel good; perfect collision without trail feels broken.
-4. **Polish genuinely last** because it's pure refinement. The game is playable without golden watches and Vinted ratings.
-5. **Deployment after game works** to avoid premature infrastructure work.
+- **Cards first** because visual change is highest-risk (200+ line replacement) and completely independent — must validate early
+- **Sound second** because it's also independent but enhances cards immediately — adding audio to slashed cards creates satisfying feedback loop
+- **Buy/sell last** because it's the most complex integration — depends on cards being stable (Act 2 renders offer cards) and benefits from sound existing (Act 2 has audio feedback)
+- **Dependencies:** Phase 3 reads Phase 1's card dimensions for offer card rendering. Phase 3 benefits from Phase 2's audio hooks being available. Phases 1 and 2 are independent of each other.
 
-**Dependency flow:**
-```
-Phase 1 (Foundation)
-    ├── Canvas, game loop, touch input
-    └── ENABLES →
-        Phase 2 (Core Gameplay)
-            ├── Spawning, physics, collision, split animation
-            └── ENABLES →
-                Phase 3 (Game Flow)
-                    ├── Start, timer, game over, difficulty
-                    └── ENABLES →
-                        Phase 4 (Polish)
-                            └── Humor details, feedback text, special watches
-```
-
-**How this avoids pitfalls:**
-- Phase 1 solves all foundational mobile pitfalls before they can waste time
-- Phase 2 uses line-segment collision and swipe trail from the start (not retrofitted)
-- Phase 3 waits until core loop is fun (no point in menus for an unsatisfying game)
-- Phase 4 is safe to iterate on because core mechanics are locked
+This ordering isolates risk: if cards break, state machine and audio are untouched. If audio has issues, gameplay still works. Only Phase 3 integrates everything.
 
 ### Research Flags
 
-**Phases with standard patterns (skip deep research):**
-- **Phase 1:** Foundation patterns are well-documented, stable for 10+ years. Use Canvas 2D API docs from MDN if needed.
-- **Phase 2:** Fruit Ninja clone tutorials are abundant. Line-circle intersection is basic geometry. No research needed.
-- **Phase 3:** State machine and timer are trivial patterns.
-- **Phase 4:** Pure content/asset work, no technical unknowns.
-- **Phase 5:** Standard Docker/nginx/SSL setup. Use existing deployment docs.
+Phases likely needing deeper research during planning:
+- **Phase 3 (Act 2 scoring/pacing):** Novel mechanic (slash-to-accept offers) has fewer direct precedents than Phase 1 (card rendering) or Phase 2 (game audio). If scoring logic feels unclear during planning, use `/gsd:research-phase` to research buyer offer patterns from shop management games (Recettear, Moonlighter reaction systems).
 
-**Phases unlikely to need `/gsd:research-phase`:** All phases. This project uses only mature, stable browser APIs and common game patterns. No niche integrations, no bleeding-edge tech, no complex algorithms.
-
-**If research IS needed during planning:**
-- Phase 2 might benefit from refreshing on line-segment-to-circle intersection math (but this is basic geometry, not deep research)
-- Phase 5 might need quick reference for nginx SSL config if unfamiliar
-
-**Overall:** This is a well-trodden path. Research-phase would be overkill for any phase. The current research provides everything needed.
+Phases with standard patterns (skip research):
+- **Phase 1 (Card rendering):** Well-documented Canvas 2D patterns (roundRect, offscreen canvas, drawImage). MDN docs + STACK.md sufficient.
+- **Phase 2 (Sound effects):** Well-documented Web Audio API patterns (OscillatorNode, GainNode, mobile unlock). MDN docs + STACK.md sufficient.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | HTML5 Canvas 2D, Pointer Events, requestAnimationFrame are stable W3C standards unchanged since 2015-2019. No library versions to verify. |
-| Features | **HIGH** | Fruit Ninja mechanics are well-documented and stable since 2010. This is settled game design knowledge. |
-| Architecture | **HIGH** | Canvas game loop patterns are foundational CS/game-dev knowledge, stable for decades. |
-| Pitfalls | **HIGH** | Mobile Canvas game pitfalls are well-documented in the community. These are common, avoidable mistakes with known solutions. |
+| Stack | HIGH | All APIs verified in MDN, baseline available, zero new dependencies validated |
+| Features | HIGH | Vinted card UI researched from multiple case studies; game audio patterns from MDN + Fruit Ninja analysis; buy/sell from Recettear/Moonlighter precedents |
+| Architecture | HIGH | Existing codebase fully analyzed (1381 lines); integration points identified; reuse vs new code quantified (~320 new lines) |
+| Pitfalls | HIGH | 16 pitfalls extracted from MDN warnings, codebase analysis, mobile browser restrictions, Canvas performance docs |
 
-**Overall confidence:** **HIGH**
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**No significant gaps.** All findings are based on mature, stable technologies and well-documented patterns.
+Research was comprehensive with high-quality sources. Minor gaps to validate during implementation:
 
-**Minor areas that need validation during implementation:**
-- **Exact watch sprite art style:** Research suggests simple readable graphics. Actual visual design (hand-drawn vs PNG photos vs stylized icons) is a creative decision to make during Phase 4. Test readability of brand names at game speed.
-- **Optimal spawn rate tuning:** Research suggests 1-2 watches early, 3-4 peak. Exact timing curves need playtesting on real device during Phase 2.
-- **Timer duration (60 vs 90 seconds):** Research suggests 60-90 seconds. Pick 60 for faster testing loops; extend to 90 if playtesting shows it's too short.
-- **Fake name difficulty progression:** Research lists example fake names. The full list and when to introduce trickier names needs design during Phase 4.
+- **Act 2 difficulty tuning:** Research identified that Act 2 needs independent difficulty curve (not Act 1's curve), but exact spawn rate, offer timing, and duration require playtesting. Plan to allocate tuning time in Phase 3.
 
-**How to handle gaps:**
-- All gaps are tuning/creative decisions, not technical unknowns
-- Playtest on real mobile Chrome device starting in Phase 2
-- Iterate on spawn rate, timer, and fake names based on feel
-- Default to simpler/faster for MVP, add complexity if time allows
+- **Card dimensions vs spawn density:** Research recommends ~80x110px cards (larger than current 60px watches). Spawn arc tuning from v1.0 may need adjustment for larger visual footprint. Plan to re-tune spawn parameters after finalizing card dimensions in Phase 1.
+
+- **Split animation direction:** Research flags that vertical clip (current approach) may not work well for rectangular portrait cards. Horizontal clip or offscreen-canvas-with-source-rect are alternatives. Design decision needed in Phase 1 — test both approaches.
+
+- **Procedural sound quality:** Research strongly recommends procedural synthesis (zero files, instant availability, arcade aesthetic). If sounds feel "too synthy" during Phase 2 playtesting, fallback to 3-4 small pre-recorded MP3s (slash, coin, penalty, jackpot). Keep procedural as first implementation.
+
+All gaps are "validate during implementation" rather than "research incomplete." No additional research phase needed before roadmap creation.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **HTML5 Canvas 2D API:** W3C standard, stable since 2015, universally supported. Training data documentation is current.
-- **Pointer Events API:** W3C standard, supported in all browsers since 2019. Training data documentation is current.
-- **Fruit Ninja game design:** 14-year-old game with unchanging core mechanics, extensively documented in game dev community.
-- **Canvas game architecture patterns:** Foundational game programming knowledge (cf. "Game Programming Patterns" by Robert Nystrom). Stable for decades.
-- **PROJECT.md context:** Project specification from `.planning/PROJECT.md`.
+- [MDN CanvasRenderingContext2D.roundRect()](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/roundRect) — Native roundRect API, browser support
+- [MDN Optimizing Canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas) — Offscreen canvas caching, shadowBlur perf warning
+- [MDN Audio for Web Games](https://developer.mozilla.org/en-US/docs/Games/Techniques/Audio_for_Web_Games) — Web Audio vs HTML5 Audio, mobile restrictions
+- [MDN Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) — OscillatorNode, GainNode, AudioContext
+- [MDN Web Audio API Best Practices](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices) — AudioContext creation timing
+- [Chrome Web Audio Autoplay Policy](https://developer.chrome.com/blog/web-audio-autoplay) — User gesture requirement, suspended state
+- [web.dev Canvas Performance](https://web.dev/articles/canvas-performance) — Pre-rendering patterns, batch drawing
+- [Can I Use roundRect](https://caniuse.com/mdn-api_canvasrenderingcontext2d_roundrect) — 94.74% global support, version numbers
+- Existing codebase: `/Users/jimmydore/Projets/thomas_birthday/game.js` (1381 lines) — Integration points, current patterns
 
-### Research Limitations
-- **Web search unavailable:** All findings based on training data (cutoff: January 2025).
-- **NPM registry unavailable:** Could not verify exact latest versions of Phaser, PixiJS, etc. (irrelevant since recommendation is zero libraries).
-- **Live Chrome version testing unavailable:** Could not verify behavior on latest mobile Chrome. However, Canvas 2D API and Pointer Events are stable standards unlikely to have changed.
+### Secondary (MEDIUM confidence)
+- [Vinted Redesign Case Studies](https://medium.com/@castillogarcialourdes/vinted-redesign-2cf32e0619a8) — Card UI element inventory (white card, brand name, price tag, heart icon)
+- [Recettear Analysis](https://www.gamedeveloper.com/design/saving-the-world-through-profit--recettear-an-item-shop-s-tale-analysis-) — Two-phase collect/sell mechanic patterns
+- [Moonlighter Wiki: Selling and Reactions](https://moonlighter.fandom.com/wiki/Selling_and_Reactions) — Five-tier pricing reaction system
+- [Fruit Ninja Sound Effects](https://sounds.spriters-resource.com/mobile/fruitninja/) — Sound category inventory (slash, impact, combo, penalty)
+- [Juice in Game Design](https://garden.bradwoods.io/notes/design/juice) — Feedback principles (audio + visual + haptic layering)
 
-### Assessment of Risk from Limitations
-**LOW risk.** The recommended stack uses only native browser APIs standardized 5-10 years ago. No cutting-edge features, no library version drift concerns. The patterns described are fundamentals that do not change.
-
-**Verification recommended during Phase 1:** Test on actual mobile Chrome device to confirm touch-action CSS, preventDefault, and DPR handling work as expected. This is standard QA, not research.
+### Tertiary (LOW confidence)
+- None — all research findings verified with multiple sources or official documentation
 
 ---
-
-*Research completed: 2026-02-07*
+*Research completed: 2026-02-08*
 *Ready for roadmap: yes*
-*Next step: Roadmap creation with phase structure from "Implications for Roadmap" section*

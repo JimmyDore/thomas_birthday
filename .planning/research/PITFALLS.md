@@ -1,426 +1,520 @@
-# Pitfalls Research
+# Domain Pitfalls: v1.1 Milestone
 
-**Domain:** Mobile browser arcade game (Fruit Ninja-style, HTML5 Canvas, touch input)
-**Researched:** 2026-02-07
-**Confidence:** HIGH (well-documented domain with extensive community knowledge; based on training data -- web search unavailable for live verification)
+**Domain:** Adding card-based visuals, two-act buy/sell mechanic, and sound effects to an existing Canvas 2D mobile game
+**Researched:** 2026-02-08
+**Confidence:** HIGH for card rendering and integration pitfalls (verified against codebase); HIGH for audio pitfalls (verified via MDN and Chrome developer docs); MEDIUM for multi-act state management (based on game state machine patterns and codebase analysis)
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Touch Events Trigger Scroll, Zoom, and Browser Chrome
-
-**What goes wrong:**
-On mobile Chrome, touch events are intercepted by the browser for scrolling, pinch-to-zoom, pull-to-refresh, and swipe-to-navigate. A swipe gesture intended to "slash" a watch instead scrolls the page, triggers back-navigation, or causes the page to bounce. The game feels broken on first touch.
-
-**Why it happens:**
-Mobile browsers use touch events for native gestures. Without explicit prevention, the browser handles touches before your game code does. Developers test in desktop DevTools where these gestures don't exist, so the problem only surfaces on a real device.
-
-**How to avoid:**
-1. Call `event.preventDefault()` on `touchstart`, `touchmove`, and `touchend` events on the canvas element.
-2. Set `touch-action: none` on the canvas element via CSS -- this tells the browser not to handle any touch gestures on that element.
-3. Use `overflow: hidden` on `html` and `body` to prevent scroll bounce.
-4. Add `<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">` to prevent pinch-to-zoom.
-5. Make the canvas fill the full viewport so there's nothing to scroll to.
-
-**Warning signs:**
-- Game works perfectly in Chrome DevTools mobile simulation but behaves erratically on real phone
-- Occasional "jumps" or screen movements during swipe
-- Pull-to-refresh appearing at top of screen during upward swipes
-
-**Phase to address:**
-Phase 1 (Foundation / Canvas Setup) -- this must be solved from the very first touch handler. Retrofitting is trivial but testing without it wastes time.
+Mistakes that cause rewrites, broken gameplay, or silent failures on mobile.
 
 ---
 
-### Pitfall 2: Game Loop Tied to setInterval Instead of requestAnimationFrame
+### Pitfall 1: Card Clipping Breaks Split-Half Animation
 
 **What goes wrong:**
-Using `setInterval` or `setTimeout` for the game loop causes inconsistent frame timing, stuttery animations, and battery drain. The game runs at unpredictable speeds -- too fast on powerful phones, too slow on weaker ones. When the tab loses focus, `setInterval` may still fire (wasting resources) or fire in bursts when focus returns (causing objects to teleport).
+The existing split-half animation uses `ctx.clip()` with a vertical `rect()` to show left/right halves of the slashed watch. Currently this clips a circular/square watch shape, which looks natural because the clip line passes through the center of a symmetric shape. When the watch is replaced by a rectangular Vinted card (taller than wide, with text, image area, and colored border), the clip line still splits at the vertical center, but the card's internal layout is not symmetric. The left half shows a cut-off brand name, the right half shows the other cut-off half. It looks broken -- like a torn UI element rather than a satisfying slash.
 
 **Why it happens:**
-`setInterval(fn, 16)` seems like "60fps" but the browser doesn't synchronize it with display refresh. Timers are deprioritized when the tab is background, then fire rapidly on resume. Game logic without delta-time makes speed hardware-dependent.
+The current `renderHalf()` function (line 539-588 of game.js) creates a `tempWatch` object at origin and clips it with `ctx.rect(0, -large, large, large*2)` or `ctx.rect(-large, -large, large, large*2)`. This assumes the watch is symmetric and centered at (0,0). A rectangular card with text labels and an image zone is NOT symmetric around its vertical center in the same way. The brand name, price text, and card borders will be sliced mid-character, looking like a rendering bug rather than a slicing effect.
 
-**How to avoid:**
-1. Use `requestAnimationFrame` exclusively for the game loop.
-2. Calculate `deltaTime` between frames: `const dt = (timestamp - lastTimestamp) / 1000`.
-3. Make ALL movement physics-based: `position += velocity * dt`, not `position += 5`.
-4. Cap `deltaTime` to a maximum (e.g., 100ms) to prevent objects teleporting after a tab-resume pause.
-5. Pause the game when `document.visibilitychange` fires with `hidden`.
+**Consequences:**
+- Split animation looks glitchy instead of satisfying
+- Players perceive visual bugs and lose trust in the game
+- If text is rendered inside the card, clipped text is visually jarring
 
-**Warning signs:**
-- Watches move faster on newer phones than older ones
-- Animations stutter periodically (not smooth 60fps)
-- Alt-tabbing away and back causes watches to jump across the screen
+**Prevention:**
+1. Before implementing the card renderer, design the split animation first. Decide: should cards split vertically (left/right) or horizontally (top/bottom)?
+2. Consider using the slash angle to determine clip direction. The existing `slashAngle` is already passed to `createSplitHalves` -- use it.
+3. For rectangular cards, horizontal splits (top/bottom) may look more natural since the card is taller than wide. A horizontal slash cutting a card into top-half (image) and bottom-half (text) looks intentional.
+4. Alternative: render the card to a small offscreen canvas once, then use `drawImage()` with source-rect clipping for the split. This avoids complex clipping math in the animation loop.
+5. Test the split with the actual card dimensions, not placeholders. The visual quality of the split IS the game feel.
 
-**Phase to address:**
-Phase 1 (Foundation / Game Loop) -- the game loop is the first thing built. Delta-time must be baked in from the start, not retrofitted.
+**Detection:**
+- Cards look "torn" rather than "sliced" when slashed
+- Text characters visibly cut in half
+- Split halves don't look like they belong to the same card
+
+**Phase to address:** Card Visual Redesign phase -- split animation must be redesigned alongside the card renderer, not after.
 
 ---
 
-### Pitfall 3: Canvas Not Sized for Device Pixel Ratio (Blurry Rendering)
+### Pitfall 2: AudioContext Suspended on Mobile -- No Sound At All
 
 **What goes wrong:**
-The canvas renders blurry text and objects on high-DPI mobile screens (which is nearly all modern phones). Watch images look fuzzy, score text looks bad, slash trails look pixelated. The game looks amateur despite correct logic.
+You add sound effects, test in desktop Chrome (works perfectly), deploy to the phone, and hear nothing. No error in console, no crash, just silence. The Web Audio API's `AudioContext` starts in `"suspended"` state on mobile Chrome and will not produce any audio until explicitly resumed during a user gesture event.
 
 **Why it happens:**
-CSS pixels and physical pixels differ on high-DPI screens. A `300x600` CSS-sized canvas on a 3x device actually renders at 300x600 physical pixels stretched over 900x1800 physical pixels. The browser upscales, causing blur.
+Chrome's autoplay policy (enforced since Chrome 71, still active) requires a user interaction -- specifically one of `touchend`, `click`, `dblclick`, `keydown`, or `keyup` -- before an `AudioContext` can transition from `"suspended"` to `"running"`. Creating the `AudioContext` on page load or even in `DOMContentLoaded` results in a suspended context. Calling `source.start()` on a suspended context is a silent no-op. Desktop Chrome may auto-allow audio on localhost, masking the problem.
 
-**How to avoid:**
+**Consequences:**
+- Zero audio on mobile -- the entire sound system is dead silent
+- No error is thrown, so the developer believes audio is working
+- Users hear nothing and assume the game has no sound
+
+**Prevention:**
+1. Create the `AudioContext` lazily -- NOT on page load, but on the first user tap (e.g., the "Jouer" button tap on the start screen).
+2. If creating it earlier, call `audioCtx.resume()` inside the "Jouer" button's tap handler. The start screen tap is the natural unlock point.
+3. Check `audioCtx.state === 'suspended'` and call `audioCtx.resume()` in every user gesture handler as a safety net.
+4. Test audio on a REAL phone before considering sound "done." Desktop testing is not reliable for autoplay policy.
+
+**Detection:**
+- Audio plays on desktop but not on mobile
+- `audioCtx.state` reads `"suspended"` after page load
+- No errors in console despite no audio output
+
+**Phase to address:** Sound Effects phase -- the very first thing to implement is AudioContext creation and unlock. All other sound work depends on this.
+
+**Sources:** [Chrome Web Audio Autoplay Policy](https://developer.chrome.com/blog/web-audio-autoplay), [MDN Audio for Web Games](https://developer.mozilla.org/en-US/docs/Games/Techniques/Audio_for_Web_Games)
+
+---
+
+### Pitfall 3: State Machine Expansion Causes Impossible State Combinations
+
+**What goes wrong:**
+The current game has 3 states: `'start'`, `'playing'`, `'over'`. Adding a two-act mechanic requires at minimum: `'start'`, `'act1_playing'`, `'act1_over'`/`'transition'`, `'act2_playing'`, `'over'`. The developer adds these as new string values to the existing `gameState` variable. But the game loop, input handlers, and rendering functions all check `gameState` with simple `===` comparisons scattered across the file. Some code paths check `gameState === 'playing'` -- which no longer exists. The game freezes, buttons stop responding, or Act 1 mechanics leak into Act 2.
+
+**Why it happens:**
+The current codebase uses a flat string variable `gameState` (line 13) checked in the game loop (lines 1362-1369), input handlers (lines 153-163), and rendering. When expanding from 3 states to 5-6 states, every conditional must be found and updated. Missing even one creates a dead code path. The string-based approach offers no exhaustiveness checking -- there is no compiler or runtime that warns "you forgot to handle the 'transition' state in the input handler."
+
+**Consequences:**
+- Game freezes on transition screen (input handler doesn't recognize the new state)
+- Act 1 mechanics run during Act 2 (spawner keeps running because it only checks `gameState === 'playing'`)
+- Score/combo from Act 1 bleeds into Act 2 when it shouldn't (or resets when it shouldn't)
+- Replay from game-over doesn't reset both acts properly
+
+**Prevention:**
+1. Before adding states, audit EVERY place `gameState` is read. In the current codebase: game loop (line 1362-1369), pointerdown handler (line 153-163), update function (line 1301), renderStart (line 1087), renderGameOver (line 1153). Document all check points.
+2. Introduce a helper: `function isPlaying() { return gameState === 'act1' || gameState === 'act2'; }` rather than changing every `=== 'playing'` check. This is the lowest-risk refactor.
+3. Group related state: use `gameState` for high-level flow (`'start'`, `'playing'`, `'transition'`, `'over'`) and a separate `currentAct` variable (`1` or `2`) for act tracking. This minimizes changes to existing code.
+4. Test EVERY state transition: start -> act1, act1 -> transition, transition -> act2, act2 -> over, over -> start. Test replay from over. Test what happens if you tap during transition.
+
+**Detection:**
+- Game freezes at a state boundary (tapping does nothing)
+- Act 2 spawns Act 1 entities
+- Score carries over incorrectly between acts
+- Replay doesn't start at Act 1
+
+**Phase to address:** Buy/Sell Mechanic phase -- state machine expansion should be the FIRST thing built, before any Act 2 gameplay. Get the flow skeleton working with placeholder screens.
+
+---
+
+### Pitfall 4: Hit Detection Breaks When Hitbox Changes from Circle to Rectangle
+
+**What goes wrong:**
+The current collision detection (line 365-389) uses `lineSegmentIntersectsCircle()` -- it checks whether the swipe trail intersects a circle centered on the watch with a generous radius. Replacing circular watches with rectangular Vinted cards means the hitbox shape changes. If you keep the circle hitbox, cards can be "hit" by swiping through empty corners of the bounding circle. If you switch to rectangle hitbox, the math is different and the existing function doesn't work.
+
+**Why it happens:**
+The current hitbox is defined by `w.size / 2 * 1.2` (line 404) -- a radius. A rectangular card has width and height, not a single radius. The card is taller than it is wide (portrait aspect ratio for a Vinted listing), so a circle hitbox either makes the top/bottom too generous or the sides too tight.
+
+**Consequences:**
+- If circle hitbox is kept: slashes that clearly miss the card visual still register as hits (frustrating for fake detection)
+- If naively switched to AABB: the hitbox doesn't rotate with the card, causing hits to miss rotating cards
+- If the hitbox is too tight: the game feels unresponsive (fast swipes miss more than before)
+
+**Prevention:**
+1. Keep the circle hitbox but base the radius on the card's SHORTER dimension (width), not the diagonal. This makes the hitbox slightly smaller than the card visual, which feels fair because the player sees a "near miss" on the card edges.
+2. Alternatively, use the card's diagonal / 2 as the radius (generous) -- better for game feel, slightly unfair on narrow misses.
+3. Do NOT attempt rotated-rectangle collision detection. The math is complex and the game already feels good with circular hitboxes. The visual will read as correct to the player.
+4. Test by swiping near card edges and corners. The feel should be that "close enough" hits register.
+
+**Detection:**
+- Swipes through the card center miss (hitbox too small)
+- Swipes through empty space near the card hit (hitbox too large)
+- Rotating cards become unhittable at certain angles
+
+**Phase to address:** Card Visual Redesign phase -- adjust hitbox radius when card dimensions are finalized, not as an afterthought.
+
+---
+
+### Pitfall 5: Inventory State Lost or Corrupted During Act Transition
+
+**What goes wrong:**
+Act 1 builds an inventory of purchased watches. The transition screen shows this inventory. Act 2 uses this inventory as the set of watches to sell. If the inventory array is the same reference as the watches array (or built from it carelessly), mutations during Act 2 corrupt the original data. Watches "disappear" from inventory, prices change, or the transition screen shows different watches than what was slashed.
+
+**Why it happens:**
+The current `watches` array (line 63) is cleared on game reset (line 1288: `watches.length = 0`). If the inventory is built by pushing references to watch objects into a new array, those references point to objects that are later modified or recycled. JavaScript arrays hold references, not copies. A shallow copy (`inventory = [...watches]`) copies the references but the objects are still shared.
+
+**Consequences:**
+- Transition screen shows wrong watches or wrong count
+- Act 2 has different watches than Act 1 collected
+- Properties (brand name, value, isFake) change between acts
+- Edge case: golden watches lose their golden status
+
+**Prevention:**
+1. When a watch is successfully slashed in Act 1, create a NEW plain object for inventory: `inventory.push({ brand: w.brand, value: w.value, isFake: w.isFake, isGolden: w.isGolden })`. Do NOT push the watch object itself.
+2. Never mutate inventory objects after creation. Treat them as immutable records.
+3. Clear the `watches` array when transitioning to Act 2, but NEVER touch `inventory`.
+4. Add an inventory count assertion: after Act 1 ends, `inventory.length` should equal `stats.realSlashed`. If not, there is a bug.
+
+**Detection:**
+- Inventory count on transition screen does not match slashed count from Act 1
+- Watch properties (brand, value) differ between Act 1 slash and Act 2 display
+- Inventory is empty after transition
+
+**Phase to address:** Buy/Sell Mechanic phase -- inventory data structure must be designed before Act 2 gameplay. This is a data modeling decision, not a gameplay decision.
+
+---
+
+## Moderate Pitfalls
+
+Mistakes that cause delays, degraded experience, or technical debt.
+
+---
+
+### Pitfall 6: Card Brand Name Unreadable at Small Sizes or During Flight
+
+**What goes wrong:**
+The whole point of the Vinted card redesign is making the brand name readable. But Canvas `fillText()` renders text as rasterized pixels with no subpixel hinting at small sizes. A brand name like "Montignac" or "Montignak" (9-10 characters) needs to fit inside a card that's ~80-100px wide on screen. At font sizes below 12px, text becomes illegible on mobile, especially while the card is rotating and moving.
+
+**Why it happens:**
+The current brand label drawing (line 873-884) uses `Math.max(11, size * 0.22)` for font size -- this already produces borderline-readable text at WATCH_SIZE=60. A card is wider than a watch dial but the text area is constrained. If the card must also show a price, a small watch illustration, and a border, the text area shrinks further. Rotating cards make text even harder to read because the eye can't track angled text in motion.
+
+**Consequences:**
+- Core gameplay mechanic (reading the brand name) is broken
+- Players can't distinguish "Montignac" from "Montignaq" at small sizes
+- The redesign fails to solve the exact problem it was created to fix
+
+**Prevention:**
+1. Set a minimum font size of 14px for the brand name. If the card is too small to fit the name at 14px, make the card bigger.
+2. Use bold weight and high-contrast colors (dark text on white card background).
+3. Use `ctx.measureText(brand).width` to verify the text fits. If not, either truncate with ellipsis or reduce card padding.
+4. Consider rendering the brand name WITHOUT rotation -- use `ctx.save()`, undo the card rotation, draw the text horizontally, `ctx.restore()`. Horizontal text is far more readable than rotated text.
+5. Test readability by having someone who does NOT know the brand names play the game. If they can't read the names at full speed, the font is too small.
+
+**Detection:**
+- Players slash randomly because they cannot read names during flight
+- Brand names are only readable when cards reach the apex of their arc (briefly stationary)
+- Sneaky fake names ("Montignaq" vs "Montignac") are indistinguishable
+
+**Phase to address:** Card Visual Redesign phase -- font size and readability must be validated with real card dimensions before finalizing layout.
+
+---
+
+### Pitfall 7: Audio Decode Lag Causes First-Play Silence or Stutter
+
+**What goes wrong:**
+Sound effects play perfectly after the first trigger but the FIRST time each sound plays, there is a noticeable delay (50-200ms) or the sound simply doesn't play. This is because the audio buffer hasn't been decoded yet when `start()` is called.
+
+**Why it happens:**
+If audio files are decoded lazily (on first play) using `decodeAudioData()`, the decode is asynchronous and takes time. The `start()` call fires before the buffer is ready. Alternatively, if using `<audio>` elements, the first `play()` triggers a network fetch on mobile (buffering is deferred until play). Either way, the first playback instance is delayed or silent.
+
+**Consequences:**
+- First slash of the game has no sound, all subsequent slashes have sound
+- Creates a "broken then fixed" perception that feels buggy
+- If using `<audio>` elements, each unique sound file has its own first-play delay
+
+**Prevention:**
+1. Use the Web Audio API (NOT `<audio>` elements) for sound effects. Web Audio buffers can be pre-decoded.
+2. Pre-load and pre-decode ALL sound buffers during the start screen, before the game begins:
 ```javascript
-const dpr = window.devicePixelRatio || 1;
-canvas.width = canvas.clientWidth * dpr;
-canvas.height = canvas.clientHeight * dpr;
-ctx.scale(dpr, dpr);
-// Continue using CSS pixel coordinates in all draw calls
-```
-Apply this on initialization AND on resize. All game logic uses CSS coordinates; the scaling is transparent.
-
-**Warning signs:**
-- Text on canvas looks blurry compared to DOM text
-- Fine details in watch images look soft or smeared
-- Game looks fine on desktop but bad on phone
-
-**Phase to address:**
-Phase 1 (Foundation / Canvas Setup) -- must be set up when canvas is initialized. Easy fix if caught early, annoying to debug later because everything "works" except it looks bad.
-
----
-
-### Pitfall 4: Touch Coordinate Mapping Ignores Canvas Offset and Scale
-
-**What goes wrong:**
-Touch coordinates from `event.touches[0].clientX/Y` are viewport coordinates, not canvas-local coordinates. If the canvas has any CSS offset, margin, padding, or is not positioned at (0,0), slashes register in the wrong position. Watches appear to dodge the player's finger.
-
-**Why it happens:**
-Developers use `clientX/Y` directly as canvas coordinates. This works when the canvas fills the entire viewport at (0,0), but breaks with any layout offset. Combined with DPR scaling, the mismatch doubles.
-
-**How to avoid:**
-```javascript
-function getCanvasPosition(touch) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: touch.clientX - rect.left,
-    y: touch.clientY - rect.top
-  };
+async function loadSound(url) {
+  const response = await fetch(url);
+  const arrayBuffer = await response.arrayBuffer();
+  return audioCtx.decodeAudioData(arrayBuffer);
 }
+// Load all sounds while player is on start screen
+const sounds = {
+  slash: await loadSound('slash.mp3'),
+  coin: await loadSound('coin.mp3'),
+  penalty: await loadSound('penalty.mp3')
+};
 ```
-Do NOT multiply by `devicePixelRatio` here if you already called `ctx.scale(dpr, dpr)` -- that handled the coordinate space. Only apply DPR if you skipped the `ctx.scale` approach.
+3. Keep audio files small (under 50KB each for short SFX). Short sounds decode in <10ms.
+4. The "Jouer" button tap that starts the game is the perfect moment to both unlock AudioContext AND verify all buffers are decoded.
 
-**Warning signs:**
-- Slashes appear offset from where the finger actually touched
-- Hit detection misses watches that the finger clearly crossed
-- Problem gets worse near screen edges
+**Detection:**
+- First slash has no sound, second slash does
+- Sounds are delayed by 100-200ms on first play
+- Audio works perfectly on desktop but has first-play issues on mobile
 
-**Phase to address:**
-Phase 1 (Foundation / Touch Input) -- coordinate mapping is foundational. Every touch interaction depends on it.
+**Phase to address:** Sound Effects phase -- pre-loading buffers should be the second thing built after AudioContext unlock.
 
----
-
-### Pitfall 5: No Swipe Trail -- Game Feels Unresponsive
-
-**What goes wrong:**
-The player swipes across the screen but sees no visual feedback. Without a visible slash trail, there's no confirmation that the input was registered. The game feels laggy even if hit detection works perfectly. Users will instinctively swipe harder and faster, making the experience worse.
-
-**Why it happens:**
-Developers focus on game logic (did the swipe hit a watch?) before visual feedback (show the swipe path). The Fruit Ninja "feel" is 50% visual feedback. Without it, technically correct hit detection still feels broken.
-
-**How to avoid:**
-1. Store recent touch points from `touchmove` events (last 8-12 points).
-2. Draw a fading trail connecting these points each frame.
-3. Use `ctx.lineWidth` decreasing and `ctx.globalAlpha` fading for the "blade" effect.
-4. Clear old points by time, not by count, to handle varying swipe speeds.
-5. Implement this BEFORE hit detection -- visual feedback is more important for perceived responsiveness.
-
-**Warning signs:**
-- Testers say the game "feels laggy" despite good frame rate
-- Users swipe multiple times on the same watch
-- Confusion about whether touch input is working
-
-**Phase to address:**
-Phase 2 (Core Gameplay / Slash Mechanic) -- immediately after basic touch input works, before watch hit detection.
+**Sources:** [MDN Web Audio API Best Practices](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices), [MDN Audio for Web Games](https://developer.mozilla.org/en-US/docs/Games/Techniques/Audio_for_Web_Games)
 
 ---
 
-### Pitfall 6: Hit Detection Uses Bounding Box Instead of Swipe Path Intersection
+### Pitfall 8: Act 2 Pacing Feels Wrong Because It Reuses Act 1 Difficulty Curve
 
 **What goes wrong:**
-Hit detection checks if a touch point falls inside a watch's bounding rectangle. This means the player must tap ON the watch, not swipe THROUGH it. Slow, deliberate swipes work but fast slashes miss because no single `touchmove` sample landed inside the watch hitbox. The game punishes the natural Fruit Ninja fast-slash gesture.
+Act 2 (selling) is supposed to feel different from Act 1 (buying). But the developer reuses the same spawn timing, difficulty ramp, and 60-second timer from Act 1. The result: Act 2 feels like "more of the same" instead of a distinct gameplay phase. Or worse, the difficulty curve that makes sense for Act 1 (gradually harder) creates an Act 2 that starts too slow or too fast.
 
 **Why it happens:**
-Point-in-rectangle is the simplest collision check. Developers test with slow deliberate touches, which work. Fast swipes produce touch samples every 10-30ms, meaning the finger may "jump" 50+ pixels between samples, skipping over a watch entirely.
+The current difficulty system (line 202-211, `getDifficulty()`) is tuned for a single 60-second round with quadratic ease-in. The spawn interval drops from 1.2s to 0.3s over the round. If Act 2 reuses this, buyers appear at the same rate as watches in Act 1. But selling is a different mechanic -- the player needs time to evaluate offers, not just react to visual appearance. Reusing the curve makes Act 2 feel rushed or identical.
 
-**How to avoid:**
-1. Store consecutive touch points and check LINE SEGMENT to CIRCLE/RECTANGLE intersection, not point-in-rect.
-2. Between consecutive `touchmove` events at `(x1,y1)` and `(x2,y2)`, check if the line segment intersects the watch hitbox.
-3. Use a generous hitbox (circle slightly larger than the watch visual).
-4. Algorithm: find the closest point on the line segment to the circle center. If that distance is less than the radius, it's a hit.
+**Consequences:**
+- Act 2 doesn't feel like a new phase -- players feel the game "just continues"
+- If Act 2 is too fast, players can't evaluate offers and slash randomly
+- If Act 2 is too slow (because difficulty resets), it feels boring after the frenetic Act 1 ending
+- The two-act structure adds nothing to the game experience
 
-**Warning signs:**
-- Fast swipes miss watches that slow taps can hit
-- Players resort to "poking" watches instead of slashing
-- Hit rate feels too low despite accurate-looking swipes
+**Prevention:**
+1. Design Act 2 difficulty independently. Create `getAct2Difficulty()` with its own curve.
+2. Act 2 should probably start at medium pace (not slow -- player is warmed up) and ramp differently.
+3. Consider making Act 2 shorter (30-40 seconds) to maintain energy. Two 60-second rounds may be too long.
+4. Playtest the transition: does the pacing shift feel intentional? Does it feel like a second act or just a restart?
+5. The difficulty parameters to tune independently: spawn rate, offer timing, how quickly good/bad offers appear, timer duration.
 
-**Phase to address:**
-Phase 2 (Core Gameplay / Hit Detection) -- must be built this way from the start. Point-in-rect hit detection should never be implemented, not even as a placeholder, because it teaches wrong testing habits.
+**Detection:**
+- Playtesters say "Act 2 felt the same as Act 1"
+- Players stop paying attention during Act 2 (boredom)
+- Players slash randomly during Act 2 (too fast to evaluate)
+- Total game time (Act 1 + transition + Act 2) exceeds 2.5 minutes (attention drops)
+
+**Phase to address:** Buy/Sell Mechanic phase -- Act 2 difficulty tuning must be a separate design task, not copied from Act 1.
 
 ---
 
-### Pitfall 7: Spawning Objects Without Considering Mobile Viewport Proportions
+### Pitfall 9: Card Rendering Performance Degrades With Complex Draw Calls
 
 **What goes wrong:**
-Watches spawn and fly in patterns designed for landscape or desktop aspect ratios. On a tall, narrow mobile phone (typical 9:19.5 ratio), watches either cluster in a narrow band, fly off-screen before the player can react, or spawn in unreachable corners. The game feels unfair or boring.
+The current watch rendering uses simple Canvas primitives: `arc()`, `fillRect()`, `fillText()`, `stroke()`. Each watch is ~15-20 draw calls. Replacing with a Vinted card adds: rounded rectangle background, inner image area, brand text, price text, condition badge, border, possibly a shadow. Each card becomes 25-35 draw calls. With 4-6 cards on screen plus 2-4 split halves, that is 200+ draw calls per frame. On low-end Android phones, frame rate drops below 30fps.
 
 **Why it happens:**
-Developers design spawn patterns on a desktop browser window (roughly 16:9 landscape), then test on phone (roughly 9:19.5 portrait). X-axis is now very narrow; Y-axis is very tall. Horizontal throws that worked on desktop leave the tiny mobile X-range too quickly.
+Canvas 2D rendering is CPU-bound. Each `fillRect()`, `fillText()`, `stroke()`, and especially `clip()` is a separate GPU command. `fillText()` with font changes is particularly expensive because the browser must re-parse the font string. The current watches already do 3 `fillText()` calls each (brand, hour markers are rects). Adding card-style layout doubles or triples this.
 
-**How to avoid:**
-1. Design spawn logic for PORTRAIT mobile from the start (tall and narrow).
-2. Watches should primarily arc upward from the bottom (like Fruit Ninja), not fly horizontally.
-3. Define spawn zones as percentages of viewport, not absolute pixels.
-4. Tune velocity and arc so watches spend 1.5-2.5 seconds in the playable area.
-5. Test on a real phone (or a correctly proportioned Chrome DevTools device) from day one.
+**Consequences:**
+- Frame rate drops from 60fps to 30-40fps on mid-range phones
+- Stuttering especially visible during high-density moments (late game, many cards)
+- Split-half animation becomes choppy (each half re-renders the full card)
 
-**Warning signs:**
-- Watches frequently fly off-screen too fast to slash
-- Some watches are unreachable (spawn in a corner and exit before player can swipe there)
-- Dead zones on screen where watches never appear
+**Prevention:**
+1. Render each card to an offscreen canvas ONCE when spawned, then use `ctx.drawImage(offscreenCanvas, x, y)` each frame. This collapses 25+ draw calls into 1 `drawImage()` call. This is the standard pattern for Canvas 2D performance.
+2. For split halves, draw from the same offscreen canvas with source-rect clipping in `drawImage(canvas, sx, sy, sw, sh, dx, dy, dw, dh)` -- zero `clip()` calls needed.
+3. Minimize font changes per frame. Set the font once, draw all text of that font, then change.
+4. Avoid `ctx.shadow` and `ctx.filter` entirely. Pre-bake shadows into the card design.
+5. Profile on a real mid-range Android phone (not desktop Chrome). Desktop is 10x faster.
 
-**Phase to address:**
-Phase 2 (Core Gameplay / Watch Spawning) -- spawn logic must be designed for mobile proportions from the start. Retrofitting spawn patterns is a full rewrite of the spawn system.
+**Detection:**
+- FPS counter drops below 50 with 4+ cards on screen
+- Visible stutter during slash animations
+- Game feels sluggish compared to v1.0
+
+**Phase to address:** Card Visual Redesign phase -- offscreen canvas caching should be the rendering strategy from the start, not a performance optimization applied later.
+
+**Sources:** [MDN Optimizing Canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas), [web.dev Canvas Performance](https://web.dev/canvas-performance/)
 
 ---
 
-### Pitfall 8: Memory Leaks from Unbounded Object Arrays
+### Pitfall 10: Overlapping Sound Effects Create Auditory Chaos
 
 **What goes wrong:**
-Watch objects, particle effects, and slash trail points accumulate in arrays without cleanup. After 2-3 minutes of gameplay, the arrays contain thousands of dead objects. Garbage collection pauses cause periodic frame drops (stutters every 5-10 seconds). On low-end phones, the game eventually crashes.
+During fast slashing (combo mode), the player slashes 3-4 watches within 500ms. Each slash triggers a sound effect. If the sounds overlap without management, the result is a cacophonous mess of layered identical sounds at higher combined volume. On mobile speakers, this clips and distorts.
 
 **Why it happens:**
-Objects are added to arrays when spawned but only flagged as "inactive" when slashed or off-screen, never removed. Or they're removed with `splice()` in a loop, which is O(n) per removal. Developers test for 30 seconds, not 3 minutes, so they never see the degradation.
+Web Audio API's `AudioBufferSourceNode` is fire-and-forget -- each `start()` call creates independent playback. There is no built-in limit on concurrent instances. Rapid slashing creates 3-4 simultaneous instances of the same slash sound, which constructively interfere (louder) and sound distorted.
 
-**How to avoid:**
-1. Use object pooling: pre-allocate a fixed array of watch objects and recycle them.
-2. For a simple game, 20-30 watch objects in a pool is more than enough.
-3. Slash particles: use a ring buffer (fixed-size array with wrapping index).
-4. Trail points: hard-cap at 100 points, remove oldest when adding new.
-5. NEVER use `array.push()` without a corresponding cleanup strategy.
+**Consequences:**
+- Audio clips and distorts during fast combos
+- Sound becomes annoying instead of satisfying
+- Players mute their phones, defeating the purpose of adding sound
 
-**Warning signs:**
-- Frame rate degrades after 1-2 minutes of play
-- Periodic micro-stutters (GC pauses)
-- Browser dev tools show increasing memory usage over time
+**Prevention:**
+1. Limit concurrent instances per sound type. For slash sounds, allow max 2-3 simultaneous playbacks.
+2. Implement a simple sound pool: track active source nodes per sound type, stop the oldest if limit exceeded.
+3. Use short sounds (under 300ms for slash, under 500ms for coin). Short sounds naturally overlap less.
+4. Use a GainNode per sound type to control volume. Reduce volume when multiple instances play simultaneously.
+5. Consider slightly varying pitch on each play (`source.playbackRate.value = 0.9 + Math.random() * 0.2`) to avoid constructive interference and make combos sound richer.
 
-**Phase to address:**
-Phase 2 (Core Gameplay) -- object pooling should be the pattern from the first spawned watch. Simple to implement upfront, painful to retrofit.
+**Detection:**
+- Audio distorts during fast combos
+- Sounds are louder during combos than during single slashes (volume stacking)
+- Testing with headphones reveals overlapping identical waveforms
+
+**Phase to address:** Sound Effects phase -- sound pool pattern should be implemented alongside the basic playback system.
 
 ---
 
-### Pitfall 9: 300ms Touch Delay on Older Mobile Browsers
+## Minor Pitfalls
 
-**What goes wrong:**
-Some mobile browsers add a 300ms delay to touch events to distinguish taps from double-taps. The game feels sluggish -- there's a visible delay between touching the screen and the slash appearing.
-
-**Why it happens:**
-Historically, mobile browsers needed to wait 300ms after a tap to see if a second tap followed (double-tap to zoom). Modern Chrome has largely eliminated this when `<meta name="viewport">` is set properly, but the delay can still occur if the viewport meta tag is missing or if `touch-action` CSS is not set.
-
-**How to avoid:**
-1. Include proper viewport meta tag: `<meta name="viewport" content="width=device-width">` (this alone eliminates the delay in modern Chrome).
-2. Set `touch-action: none` on the canvas (belt-and-suspenders).
-3. Listen for `touchstart`/`touchmove`/`touchend`, NOT `click`/`mousedown` events.
-4. Since the project targets Mobile Chrome only, this is largely solved by the viewport tag, but verify on a real device.
-
-**Warning signs:**
-- Noticeable delay between finger touching screen and visual response
-- Game feels "behind" the finger
-- Tapping feels sluggish but long-presses work normally
-
-**Phase to address:**
-Phase 1 (Foundation / HTML Setup) -- viewport meta tag is in the HTML boilerplate. Nearly zero effort but critical to not forget.
+Mistakes that cause annoyance but are fixable without rework.
 
 ---
 
-### Pitfall 10: Canvas Clearing Strategy Causes Flicker or Ghost Trails
+### Pitfall 11: Card Dimensions Break Spawn Arc Tuning
 
 **What goes wrong:**
-Either the canvas is not cleared each frame (causing ghost trails of old watch positions), or it's cleared incorrectly causing visible flicker. Sometimes developers clear the canvas, draw, and the clear happens slightly before the display refresh, causing a flash of blank screen.
+Watches are currently ~60px diameter circles. Vinted cards are rectangular, perhaps ~80x110px (portrait). The larger visual footprint means cards overlap each other more during high-density moments. Cards also look too large at screen edges and too small at the arc apex. The spawn velocity and arc tuning that worked for 60px circles produces wrong visual density for larger rectangles.
 
-**Why it happens:**
-Missing `ctx.clearRect(0, 0, width, height)` at the start of each frame. Or clearing with a translucent fill (for trail effects) that accumulates opacity. Or drawing in the wrong order (clear, draw background, draw objects is correct; draw objects, clear is wrong).
+**Prevention:**
+1. After finalizing card dimensions, re-tune spawn parameters: spacing between spawns, max concurrent entities, and velocity.
+2. Consider slightly reducing card size compared to initial design if cards look cramped with current spawn density.
+3. Test with late-game difficulty (0.3s spawn interval, 1.8x speed) to see if cards pile up.
 
-**How to avoid:**
-1. Every frame begins with `ctx.clearRect(0, 0, canvas.width, canvas.height)` (using actual canvas dimensions, not CSS dimensions).
-2. If using DPR scaling, remember `canvas.width` is already scaled, so `clearRect` needs the scaled values OR use `ctx.clearRect(0, 0, cssWidth, cssHeight)` if you used `ctx.scale()`.
-3. Draw order: clear -> background -> objects (back to front) -> UI (score, etc.) -> slash trail (on top).
-4. Never use `canvas.width = canvas.width` as a clear trick -- it resets ALL canvas state including transforms.
-
-**Warning signs:**
-- Watch afterimages visible on screen
-- Visible flicker/flash between frames
-- Random visual corruption
-
-**Phase to address:**
-Phase 1 (Foundation / Game Loop Rendering) -- render pipeline order is established in the very first frame draw.
+**Phase to address:** Card Visual Redesign phase -- after card dimensions are finalized, before declaring the phase done.
 
 ---
 
-### Pitfall 11: Image Loading Race Condition on Game Start
+### Pitfall 12: Audio Files Bloat Mobile Load Time
 
 **What goes wrong:**
-Watch images are loaded with `new Image()` and drawn immediately. On slow connections (mobile 4G), images haven't loaded when the first frame draws, so watches appear as blank rectangles or the game crashes with "image not loaded" errors. Or worse, some watches load and others don't, creating an inconsistent experience.
+Adding 5-8 sound effect files (slash, coin, penalty, golden, combo, transition, act-end, game-over) can add 200KB-1MB to the initial load if files are uncompressed WAV or high-bitrate MP3. On mobile 4G, this adds 1-3 seconds to first load.
+
+**Prevention:**
+1. Use MP3 or OGG format at 96-128kbps for sound effects. Most SFX are under 1 second and compress to 5-15KB each.
+2. Total audio payload should stay under 100KB for all SFX combined.
+3. Load audio files in parallel with or after the start screen renders, not blocking the initial display.
+4. Consider using a single audio sprite (one file with all sounds concatenated) to reduce HTTP requests.
+
+**Phase to address:** Sound Effects phase -- file format and size should be decided before creating/sourcing sound files.
+
+---
+
+### Pitfall 13: Transition Screen Blocks Gameplay Flow
+
+**What goes wrong:**
+The transition between Act 1 and Act 2 shows an inventory summary. If it requires a button tap to proceed, impatient players tap immediately without reading. If it auto-advances on a timer, slow readers miss the information. Either way, the transition disrupts the arcade flow.
+
+**Prevention:**
+1. Auto-advance after 3-4 seconds with a visible countdown, but also allow tap-to-skip.
+2. Keep the transition screen information minimal: "X montres achetees -- A toi de vendre!" with the inventory count. Don't show individual items (too much to read in 3 seconds).
+3. Use a brief animated transition (fade, slide) rather than an abrupt screen swap. Abrupt changes feel like bugs.
+4. Never exceed 5 seconds for the transition. The game should feel continuous.
+
+**Phase to address:** Buy/Sell Mechanic phase -- transition screen design.
+
+---
+
+### Pitfall 14: resetGame() Does Not Reset New State Variables
+
+**What goes wrong:**
+The current `resetGame()` function (lines 1281-1297) resets score, elapsed, combo, watches, particles, etc. When adding inventory, currentAct, act2-specific state, and audio state, developers forget to reset them in `resetGame()`. The replay from game-over starts Act 1 with Act 2's state still active, inventory from the previous game, or audio in a weird state.
+
+**Prevention:**
+1. When adding ANY new state variable, IMMEDIATELY add its reset to `resetGame()`.
+2. Audit: after implementing all new features, read `resetGame()` line by line and verify every mutable global is reset.
+3. Test: complete a full game (Act 1 -> Transition -> Act 2 -> Game Over), then tap Replay. Verify the game starts fresh from Act 1 with empty inventory and reset score.
+
+**Detection:**
+- Second playthrough starts with inventory from first playthrough
+- Act indicator shows "Act 2" at the start of a new game
+- Score from previous game carries over
+
+**Phase to address:** Buy/Sell Mechanic phase -- every time a new state variable is added.
+
+---
+
+## Integration Pitfalls
+
+Mistakes specific to adding features to the existing working v1.0 codebase.
+
+---
+
+### Pitfall 15: Refactoring Watch Drawing Breaks Existing Split Animation
+
+**What goes wrong:**
+Replacing the three watch drawing functions (`drawRoundWatch`, `drawSquareWatch`, `drawSportWatch`) with a single card renderer seems straightforward. But the `renderHalf()` function (line 539-588) calls these exact functions through a switch on `tempWatch.style`. If the card renderer has a different API (different parameters, different coordinate expectations), `renderHalf()` silently renders nothing or renders incorrectly. The existing satisfying split animation breaks.
 
 **Why it happens:**
-`new Image(); img.src = 'watch.png'` is asynchronous. The `onload` callback fires later. Developers on fast connections (localhost) never see the delay. On a phone loading from a VPS, images can take 200ms-2s to load.
+The split-half system creates a `tempWatch` at origin (line 557-566) and calls the watch drawing functions. It relies on those functions drawing centered at (0,0) with a known size parameter. If the new card renderer expects `(x, y, width, height)` instead of `(ctx, r, caseColor, brand, size)`, the split-half code passes wrong arguments. No runtime error -- just wrong visuals.
 
-**How to avoid:**
-1. Create a preloader that loads ALL images before starting the game.
-2. Simple pattern:
-```javascript
-function loadImages(sources) {
-  return Promise.all(sources.map(src => new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  })));
-}
-// Wait for all images, THEN start game loop
-loadImages(['watch1.png', 'watch2.png']).then(startGame);
-```
-3. Show a simple loading screen (even just "Chargement...") while images load.
-4. Keep total asset size small (under 500KB) for fast mobile loading.
+**Prevention:**
+1. Keep the same function signature for the card renderer that the split-half system expects: draws centered at (0,0) with a known size.
+2. Alternatively, update `renderHalf()` and `createSplitHalves()` at the SAME TIME as the card renderer. Never commit one without the other.
+3. Test the split animation IMMEDIATELY after changing the renderer, not at the end of the card redesign.
+4. The offscreen canvas approach (Pitfall 9) naturally solves this: `renderHalf()` uses `drawImage()` with source-rect clipping instead of calling the renderer directly.
 
-**Warning signs:**
-- Watches occasionally render as blank/broken on first play
-- Game works on reload but not on first visit
-- Inconsistent behavior on different network speeds
+**Detection:**
+- Slashing a card produces blank or broken split halves
+- Split halves show the old watch design while intact cards show the new card design
+- Split halves are mispositioned or wrong size
 
-**Phase to address:**
-Phase 1 (Foundation / Asset Loading) -- preloader must exist before any images are drawn. A 3-line loading screen prevents a category of bugs.
+**Phase to address:** Card Visual Redesign phase -- split animation and card renderer must be updated together as one atomic change.
 
-## Technical Debt Patterns
+---
 
-Shortcuts that seem reasonable but create long-term problems.
+### Pitfall 16: Adding Act 2 Input Handling Conflicts with Existing Swipe Logic
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Hardcoded canvas dimensions (e.g., 375x812) | Quick setup, no resize logic | Breaks on any other screen size, orientation change | Never -- percentage-based sizing from the start |
-| Inline styles instead of CSS classes | Faster to write | Hard to adjust for different screens, no media queries | Never for layout; acceptable for dynamic canvas-drawn elements |
-| All game state in global variables | No module system needed | Impossible to add features like restart, pause, game-over screen | Acceptable for MVP if variables are grouped in a single `gameState` object |
-| Drawing text with Canvas `fillText` for UI | No DOM/CSS needed | Poor readability, no line wrapping, manual positioning | Acceptable for in-game score; use DOM overlay for menus, messages, game-over |
-| Skipping the preloader | One less thing to build | Broken first-load on slow connections | Never -- even a 5-line preloader prevents this |
-| Using PNG for every watch variant | Simple to create | Large download size if many variants | Acceptable if total assets stay under 500KB; consider sprite sheet if more |
+**What goes wrong:**
+Act 2 (selling) likely has different input semantics than Act 1 (buying). In Act 1, you swipe to slash. In Act 2, you might swipe to accept/reject offers, or tap to select which watch to sell, or swipe through a different type of entity. If Act 2 input is layered onto the existing input handler without proper state gating, swipe detection from Act 1 fires during Act 2, causing unintended slashes or double-triggers.
 
-## Integration Gotchas
+**Why it happens:**
+The current input handler (lines 146-192) uses `isPointerDown` and `trailPoints` which are global. If Act 2 reuses the same trail system for different purposes, or if the collision detection still runs during Act 2 checking against the wrong entity type, inputs cross-contaminate between acts.
 
-Common mistakes when connecting to external services.
+**Prevention:**
+1. Gate input handling on the current act. The simplest approach: keep the same swipe mechanic in both acts (consistency). Only change what gets slashed and the scoring logic.
+2. If Act 2 uses different input, the input handler should check `currentAct` and route to different handling functions.
+3. Clear `trailPoints` and `isPointerDown` during act transition (already done in `resetGame()` pattern).
+4. Do NOT add new event listeners for Act 2. Reuse the existing ones with act-conditional logic.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| VPS hosting (nginx) | Not setting correct MIME types for `.js` and `.json` files | Ensure nginx config has `types { application/javascript js; application/json json; }` or use `include mime.types` |
-| Docker | Multi-stage build copies node_modules to production image | For a static site, the Docker image only needs nginx + static files. No Node.js in production. |
-| GitHub Actions | Building on push but not caching layers | For a static site, builds are fast enough that caching is unnecessary. Keep the pipeline simple. |
-| SSL (Let's Encrypt) | Certificate renewal not automated | Use certbot with auto-renewal cron, or a Docker setup with automatic HTTPS (e.g., caddy) |
-| Custom domain | DNS not propagated before testing HTTPS | Set up DNS record first, wait for propagation, then configure SSL |
+**Detection:**
+- Swiping in Act 2 triggers Act 1 scoring
+- Trail rendering looks wrong in Act 2
+- Tap-based Act 2 input conflicts with swipe detection
 
-## Performance Traps
+**Phase to address:** Buy/Sell Mechanic phase -- decide Act 2 input model before implementing it.
 
-Patterns that work at small scale but fail as usage grows.
+---
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Creating new objects every frame (`new Image()`, `new Path2D()`) | GC pauses, micro-stutters every few seconds | Create objects once, reuse. Pre-allocate in setup. | After 30-60 seconds of play |
-| Drawing text with `ctx.fillText` every frame with font changes | Slow font parsing, inconsistent rendering | Cache text as images or minimize font changes per frame | With 10+ text draws per frame |
-| Unoptimized image sizes (2000x2000px watch PNGs) | Slow loading, excessive GPU memory, compositing lag | Resize images to actual display size (max 200x200px for a watch) | Immediately on low-end phones |
-| Complex `ctx.shadow` or `ctx.filter` on every draw call | Drastic frame rate drop, especially on Android | Avoid real-time shadows/filters; pre-bake effects into images or use simple opacity tricks | Immediately with 5+ objects |
-| Full-canvas redraw when only a small area changed | Unnecessary GPU work | For a simple game with moving objects, full redraw is actually fine (dirty-rect tracking adds complexity for little gain in this case) | Not a real issue for this project -- full clear + redraw is the right pattern here |
+## Phase-Specific Warnings
 
-## Security Mistakes
-
-Domain-specific security issues beyond general web security.
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Score stored in client-side JavaScript variable | Trivially cheat-able via console | For a joke birthday game, this is totally fine. No server-side validation needed. If Thomas cheats his own birthday game, that's on him. |
-| Sensitive assets (e.g., real Montignac watch photos with IP concerns) | Copyright issues if using official product photos | Use simple drawn/stylized watch graphics or clearly fair-use illustrations |
-| Hosting on a subdomain with cookies from the parent domain | Cookie leakage across subdomains | Use a dedicated subdomain with no shared auth; for a static game, no cookies needed at all |
-
-Note: Security is minimal concern for a static, single-player joke game with no backend, no auth, and no real money involved.
-
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| No visual/haptic feedback on successful slash | Slash feels weightless, unsatisfying | Add: (1) watch splits in two halves, (2) score popup "+5 EUR" flies up, (3) brief particle burst |
-| Score text too small or positioned where thumb covers it | Player can't see their score while playing | Place score at top-center of screen, large font, with subtle background for readability |
-| No distinction between real and fake watches until too late | Player can't make strategic decisions, feels random | Real watches should look visibly different (color, style, label placement). Not a "trick" game -- player should be able to learn the difference |
-| Game starts immediately on page load | Player is confused, misses the first watches | Show a simple start screen with instructions: "Glisse pour trancher les montres!" and a "Jouer" button |
-| No game-over state or replay option | After time runs out, nothing happens | Clear game-over screen: final profit in euros, personal message for Thomas, "Rejouer" button |
-| Too many watches on screen at once | Overwhelming, can't distinguish real from fake | Start with 1-2 watches, gradually increase. Peak at 3-4 simultaneous watches. |
-| Watches too small to read the brand name | Can't distinguish Montignac from Montignak | Make watches large enough that the brand text is readable at a glance (at least 80x80px tap target) |
-| No pause when screen is touched accidentally (pocket, notification pull) | Game continues while player isn't looking | Pause on `visibilitychange` event. Optional: pause on touch outside game area. |
-
-## "Looks Done But Isn't" Checklist
-
-Things that appear complete but are missing critical pieces.
-
-- [ ] **Touch handling:** Works in DevTools but not tested on real phone -- verify on actual mobile Chrome
-- [ ] **Canvas sizing:** Looks fine on one phone but not verified across screen sizes -- test on at least 2 different phones (or DevTools device presets)
-- [ ] **Game start:** Game starts but no loading screen for assets -- verify on slow 3G throttle in DevTools
-- [ ] **Hit detection:** Works with slow taps but not tested with fast swipes -- test by swiping quickly through watches
-- [ ] **Score display:** Shows numbers but doesn't show euro sign or "profit" framing -- verify the scoring presentation matches the joke concept
-- [ ] **Brand names:** Watches appear but brand names aren't readable at game speed -- verify text is legible while watches are in motion
-- [ ] **Game end:** Timer ends but no game-over screen, restart, or birthday message -- this IS the punchline, don't skip it
-- [ ] **Orientation:** Works in portrait but breaks if phone rotates to landscape -- lock to portrait or handle both
-- [ ] **URL sharing:** Game works when you type the URL but the link preview (og:tags) is missing or generic -- add og:title, og:description, og:image for a nice share preview
-- [ ] **First-load experience:** Works after caching but first load on cellular is slow or broken -- test with cache disabled
+| Phase Topic | Likely Pitfall | Severity | Mitigation |
+|-------------|---------------|----------|------------|
+| Card Visual Redesign | Split animation breaks (P1, P15) | CRITICAL | Redesign split alongside card renderer; use offscreen canvas |
+| Card Visual Redesign | Text readability at small sizes (P6) | MODERATE | Min 14px font, test with real player |
+| Card Visual Redesign | Performance regression from complex cards (P9) | MODERATE | Offscreen canvas caching from day one |
+| Card Visual Redesign | Hit detection shape mismatch (P4) | CRITICAL | Keep circle hitbox, tune radius to card width |
+| Card Visual Redesign | Spawn arc tuning invalidated (P11) | MINOR | Re-tune after card dimensions finalized |
+| Buy/Sell Mechanic | State machine impossible states (P3) | CRITICAL | Audit all gameState checks; use isPlaying() helper |
+| Buy/Sell Mechanic | Inventory corruption (P5) | CRITICAL | Clone data into inventory; never share references |
+| Buy/Sell Mechanic | Act 2 pacing identical to Act 1 (P8) | MODERATE | Independent difficulty curve for Act 2 |
+| Buy/Sell Mechanic | resetGame() incomplete (P14) | MINOR | Audit after every new variable |
+| Buy/Sell Mechanic | Transition screen flow (P13) | MINOR | 3-4s auto-advance with tap-to-skip |
+| Buy/Sell Mechanic | Input conflict between acts (P16) | MODERATE | Same swipe mechanic, different scoring |
+| Sound Effects | AudioContext suspended (P2) | CRITICAL | Unlock on "Jouer" tap; test on real phone |
+| Sound Effects | First-play decode lag (P7) | MODERATE | Pre-decode all buffers during start screen |
+| Sound Effects | Overlapping sounds distort (P10) | MODERATE | Sound pool with max 2-3 concurrent per type |
+| Sound Effects | Audio file size bloat (P12) | MINOR | MP3 96kbps, total under 100KB |
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
+When pitfalls occur despite prevention.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Touch scroll/zoom not prevented | LOW | Add `touch-action: none` CSS + `preventDefault()` calls. 5-minute fix. |
-| setInterval game loop | MEDIUM | Replace with rAF loop + delta time. Requires updating all movement code to use dt. 1-2 hours. |
-| Blurry canvas (no DPR handling) | LOW | Add DPR scaling code. 10-minute fix, but test all coordinates after. |
-| Wrong touch coordinates | LOW | Add `getBoundingClientRect()` offset correction. 10-minute fix. |
-| Point-based hit detection (misses fast swipes) | MEDIUM | Rewrite to line-segment intersection. 1-2 hours, but conceptually different approach. |
-| Desktop-proportioned spawn patterns | HIGH | Redesign spawn zones, velocities, and arcs for portrait. May require extensive retuning. 2-4 hours. |
-| Memory leaks from unbounded arrays | MEDIUM | Implement object pooling and ring buffers. 1-2 hours to retrofit if game logic is clean. |
-| Missing image preloader | LOW | Wrap image loads in Promise.all, add loading screen. 30-minute fix. |
-| No game-over screen | LOW | Add DOM overlay with final score and restart button. 30-60 minutes. |
+| Split animation broken (P1) | MEDIUM | Implement offscreen canvas approach -- replaces clip-based splitting entirely. 1-2 hours. |
+| AudioContext silent (P2) | LOW | Add `audioCtx.resume()` to tap handler. 10-minute fix once diagnosed. |
+| State machine bugs (P3) | HIGH | Must audit every gameState check and test every transition. 2-4 hours if bugs have accumulated. |
+| Hit detection wrong shape (P4) | LOW | Adjust hitbox radius. 10-minute parameter tweak. |
+| Inventory corruption (P5) | MEDIUM | Rewrite inventory to use cloned objects. 30-60 minutes plus testing. |
+| Text unreadable (P6) | LOW | Increase font size and card size. 15-minute tweak plus playtest. |
+| Decode lag (P7) | LOW | Add pre-decode step. 20-minute fix. |
+| Wrong pacing (P8) | MEDIUM | Create new difficulty function. 1-2 hours of tuning. |
+| Performance regression (P9) | HIGH | Retrofit offscreen canvas caching. 2-3 hours to restructure rendering. |
+| Sound distortion (P10) | LOW | Add sound pool limiter. 30-minute fix. |
+| Spawn tuning (P11) | LOW | Adjust constants. 15-minute tweak. |
+| Load time (P12) | LOW | Compress audio files. 15-minute fix. |
+| Transition flow (P13) | LOW | Adjust timer and add skip. 15-minute fix. |
+| Reset incomplete (P14) | LOW | Add missing resets. 10-minute fix once found. |
+| Split/renderer mismatch (P15) | MEDIUM | Update both in lockstep. 1 hour. |
+| Input conflict (P16) | MEDIUM | Add act-based gating. 30-60 minutes. |
 
-## Pitfall-to-Phase Mapping
+## "Looks Done But Isn't" Checklist for v1.1
 
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Touch scroll/zoom interference | Phase 1: Foundation (HTML + CSS setup) | Swipe on real phone -- page must not scroll, zoom, or bounce |
-| setInterval game loop | Phase 1: Foundation (game loop) | Log delta-time values; they should be ~16ms, not erratic |
-| Blurry canvas rendering | Phase 1: Foundation (canvas init) | Compare canvas text sharpness to DOM text on a real phone |
-| Touch coordinate mapping | Phase 1: Foundation (input handling) | Tap canvas corners -- drawn dot should appear exactly under finger |
-| 300ms touch delay | Phase 1: Foundation (HTML meta tags) | Touch response should feel instant, no perceptible delay |
-| Canvas clearing / render order | Phase 1: Foundation (render loop) | No ghost trails, no flicker, objects render back-to-front |
-| Image loading race condition | Phase 1: Foundation (asset pipeline) | Throttle to Slow 3G in DevTools, reload -- game should show loading then start clean |
-| No swipe trail | Phase 2: Core Gameplay (slash mechanic) | Swipe across screen -- visible fading trail follows finger |
-| Swipe-through hit detection | Phase 2: Core Gameplay (hit detection) | Fast-swipe through a watch -- should register as hit |
-| Mobile viewport spawn proportions | Phase 2: Core Gameplay (watch spawning) | All watches reachable and on-screen long enough to react on a real phone |
-| Memory leaks / GC pauses | Phase 2: Core Gameplay (object management) | Play for 3+ minutes -- frame rate must remain stable |
-| UX feedback (slash effects, score popups) | Phase 3: Polish (juice and feel) | Each slash feels satisfying with visual confirmation |
-| Game-over screen and birthday message | Phase 3: Polish (game flow) | Timer ends, birthday message appears, replay works |
-| Orientation handling | Phase 3: Polish (edge cases) | Rotate phone -- game adapts or stays locked to portrait |
-| OG meta tags for URL sharing | Phase 3: Polish (deployment) | Share URL on WhatsApp/iMessage -- preview shows game title and description |
+- [ ] **Card readability:** Cards render beautifully when stationary but brand names are unreadable during flight at full speed
+- [ ] **Split animation:** Cards split in half but the halves look like torn UI rather than satisfying slices
+- [ ] **Audio on mobile:** Sound effects work on desktop but are completely silent on mobile Chrome (AudioContext suspended)
+- [ ] **First sound:** All sounds work except the very first one played in each session (decode lag)
+- [ ] **Act transition:** Act 1 ends and Act 2 starts but score/inventory carries incorrectly
+- [ ] **Replay after Act 2:** Game over -> Replay starts at Act 2 instead of Act 1
+- [ ] **Combo sounds:** Single slashes sound great but fast combos produce distorted audio
+- [ ] **Performance:** Cards look gorgeous in isolation but frame rate drops with 4+ on screen simultaneously
+- [ ] **Hit detection:** Cards can be slashed but the hitbox feels "off" compared to the old circular watches
 
 ## Sources
 
-- Training data from HTML5 game development community (MDN Canvas docs, HTML5 game development tutorials, mobile browser compatibility documentation)
-- Known patterns from Fruit Ninja HTML5 clones and touch-based Canvas games
-- Mobile Chrome touch event handling documentation patterns
-- Canvas performance optimization best practices
-
-**Note:** Web search was unavailable during this research session. All findings are based on training data (cutoff: May 2025). The pitfalls documented here are well-established, widely documented patterns in the HTML5 Canvas game development community. Confidence is HIGH because these are fundamental browser behaviors and Canvas API characteristics that are unlikely to have changed. However, verify specific Chrome behavior on the target device.
+- [Chrome Web Audio Autoplay Policy](https://developer.chrome.com/blog/web-audio-autoplay) -- AudioContext user gesture requirement
+- [MDN Audio for Web Games](https://developer.mozilla.org/en-US/docs/Games/Techniques/Audio_for_Web_Games) -- Mobile audio strategies, audio sprites, buffer pre-loading
+- [MDN Web Audio API Best Practices](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices) -- Buffer management, source node lifecycle
+- [MDN Optimizing Canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas) -- Offscreen canvas, draw call reduction
+- [web.dev Canvas Performance](https://web.dev/canvas-performance/) -- Pre-rendering to offscreen canvas
+- [MDN CanvasRenderingContext2D: clip()](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/clip) -- Clipping behavior and intersection semantics
+- [MDN fillText()](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText) -- Text rendering and maxWidth parameter
+- [Game Programming Patterns: State](https://gameprogrammingpatterns.com/state.html) -- State machine patterns for game flow
+- Codebase analysis: `/Users/jimmydore/Projets/thomas_birthday/game.js` (1381 lines, line references throughout)
 
 ---
-*Pitfalls research for: Watch Ninja (mobile browser arcade game)*
-*Researched: 2026-02-07*
+*Pitfalls research for: Watch Ninja v1.1 (Vinted cards, buy/sell mechanic, sound effects)*
+*Researched: 2026-02-08*
