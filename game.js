@@ -1406,16 +1406,16 @@ function renderTimerValue(remaining) {
   var timerW = ctx.measureText(timerText).width;
   var pillW = timerW + 20;
 
-  // Timer pill centered at top
+  // Timer pill on second row (below score/rating pills)
   ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
   ctx.beginPath();
-  roundRect(ctx, canvasWidth / 2 - pillW / 2, 10, pillW, 36, 8);
+  roundRect(ctx, canvasWidth / 2 - pillW / 2, 52, pillW, 32, 8);
   ctx.fill();
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = isWarning ? '#ff4444' : '#ffffff';
-  ctx.fillText(timerText, canvasWidth / 2, 28);
+  ctx.fillText(timerText, canvasWidth / 2, 68);
 }
 
 // --- Combo Display ---
@@ -1482,14 +1482,14 @@ function renderAct1HUD() {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('Acte 1 : Les Achats', canvasWidth / 2, 55);
+  ctx.fillText('Acte 1 : Les Achats', canvasWidth / 2, 92);
 
   // Inventory counter
   var countText = inventory.length + (inventory.length <= 1 ? ' montre achet\u00e9e' : ' montres achet\u00e9es');
   ctx.font = '14px sans-serif';
   ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
   ctx.textAlign = 'left';
-  ctx.fillText(countText, 14, 80);
+  ctx.fillText(countText, 14, 110);
   ctx.restore();
 }
 
@@ -1994,7 +1994,7 @@ function renderAct2(dt) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('Acte 2 : La Revente', canvasWidth / 2, 55);
+  ctx.fillText('Acte 2 : La Revente', canvasWidth / 2, 92);
   ctx.restore();
 
   // Revenue display (replaces score pill for Act 2)
@@ -2019,7 +2019,7 @@ function renderAct2(dt) {
   ctx.font = '14px sans-serif';
   ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
   ctx.textAlign = 'left';
-  ctx.fillText(unsoldCount + ' montre(s) a vendre', 14, 80);
+  ctx.fillText(unsoldCount + ' montre(s) a vendre', 14, 110);
 
   // Timer (reuse shared renderer)
   var remaining = Math.max(0, Math.ceil(ACT2_DURATION - act2Elapsed));
