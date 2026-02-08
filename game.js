@@ -206,8 +206,7 @@ function getDifficulty() {
   return {
     spawnInterval: Math.max(0.3, 1.2 - tEased * 0.9),  // 1.2s -> 0.3s
     speedMultiplier: 1.0 + t * 0.8,                      // 1.0x -> 1.8x
-    fakeChance: 0.20 + t * 0.45,                          // 20% -> 65%
-    sneakyChance: 0.15 + t * 0.45                          // 15% -> 60% of fakes
+    fakeChance: 0.20 + t * 0.45                             // 20% -> 65%
   };
 }
 
@@ -216,8 +215,6 @@ function getDifficulty() {
 function spawnWatch(diff) {
   var speedMult = diff ? diff.speedMultiplier : 1.0;
   var fakeChance = diff ? diff.fakeChance : 0.4;
-  var sneakyChance = diff ? diff.sneakyChance : 0.3;
-
   var fromLeft = Math.random() < 0.5;
   var x = fromLeft
     ? canvasWidth * (0.1 + Math.random() * 0.3)
@@ -237,9 +234,6 @@ function spawnWatch(diff) {
     ? pickFakeName(Math.min(1, elapsed / ROUND_DURATION))
     : 'Montignac';
 
-  // Sneaky fakes use same green color as real -- only misspelled name distinguishes them
-  var sneaky = isFake && Math.random() < sneakyChance;
-
   var watchSize = isGolden ? WATCH_SIZE * 1.2 : WATCH_SIZE;
   var watchValue = isGolden ? 50 : (isFake ? -15 : 10);
   var cardW = isGolden ? CARD_WIDTH * 1.2 : CARD_WIDTH;
@@ -255,10 +249,9 @@ function spawnWatch(diff) {
     width: cardW,
     height: cardH,
     rotation: 0,
-    rotationSpeed: (Math.random() - 0.5) * 3,
+    rotationSpeed: (Math.random() - 0.5) * 0.5,
     isFake: isFake,
     isGolden: isGolden,
-    sneaky: sneaky,
     brand: brand,
     price: price,
     slashed: false,
@@ -408,7 +401,7 @@ function checkSlashCollisions() {
       var w = watches[j];
       if (w.slashed) continue;
 
-      var hitRadius = w.size / 2 * 1.2; // 20% generous hitbox
+      var hitRadius = Math.max(w.width, w.height) / 2 * 1.1; // card-sized hitbox
       if (lineSegmentIntersectsCircle(p0.x, p0.y, p1.x, p1.y, w.x, w.y, hitRadius)) {
         var slashAngle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
         slashWatch(w, slashAngle);
@@ -494,7 +487,6 @@ function createSplitHalves(watch, slashAngle) {
       brand: watch.brand,
       isFake: watch.isFake,
       isGolden: watch.isGolden,
-      sneaky: watch.sneaky,
       price: watch.price,
       sprite: watch.sprite,
       spritePadding: watch.spritePadding,
@@ -516,7 +508,6 @@ function createSplitHalves(watch, slashAngle) {
       brand: watch.brand,
       isFake: watch.isFake,
       isGolden: watch.isGolden,
-      sneaky: watch.sneaky,
       price: watch.price,
       sprite: watch.sprite,
       spritePadding: watch.spritePadding,
@@ -943,7 +934,6 @@ function initDecorWatches() {
       rotationSpeed: (Math.random() - 0.5) * 0.5,
       isFake: isFake,
       isGolden: false,
-      sneaky: false,
       brand: isFake ? FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)] : 'Montignac',
       price: 10 + Math.floor(Math.random() * 90),
       slashed: false
