@@ -608,6 +608,128 @@ function checkSlashCollisions() {
   }
 }
 
+// --- Act 2: Swipe Direction Detection ---
+
+function getSwipeDirection(points) {
+  if (!points || points.length < 3) return null;
+
+  var first = points[0];
+  var last = points[points.length - 1];
+  var dx = last.x - first.x;
+  var dy = last.y - first.y;
+  var absDx = Math.abs(dx);
+  var absDy = Math.abs(dy);
+
+  // Minimum 30px horizontal displacement
+  if (absDx < 30) return null;
+
+  // Horizontal component must be > 0.8x vertical component
+  if (absDx <= absDy * 0.8) return null;
+
+  return dx > 0 ? 'right' : 'left';
+}
+
+// --- Act 2: Collision Detection ---
+
+function checkAct2Collisions() {
+  if (trailPoints.length < 2) return;
+
+  var direction = getSwipeDirection(trailPoints);
+  if (direction === null) return; // no clear directional swipe
+
+  // Same trail segment check as checkSlashCollisions
+  var start = Math.max(0, trailPoints.length - 6);
+  for (var i = start + 1; i < trailPoints.length; i++) {
+    var p0 = trailPoints[i - 1];
+    var p1 = trailPoints[i];
+
+    for (var j = watches.length - 1; j >= 0; j--) {
+      var w = watches[j];
+      if (w.slashed) continue;
+      if (!w.isBuyerOffer) continue;
+
+      var hitRadius = Math.max(w.width, w.height) / 2 * 1.1;
+      if (lineSegmentIntersectsCircle(p0.x, p0.y, p1.x, p1.y, w.x, w.y, hitRadius)) {
+        if (direction === 'right') {
+          acceptOffer(w);
+        } else {
+          rejectOffer(w);
+        }
+      }
+    }
+  }
+}
+
+// --- Act 2: Accept Offer ---
+
+function acceptOffer(offerCard) {
+  // Mark to prevent re-detection
+  offerCard.slashed = true;
+
+  // Update inventory
+  var invItem = inventory[offerCard.targetIndex];
+  invItem.sold = true;
+  invItem.soldFor = offerCard.offerPrice;
+  invItem.offerPending = false;
+
+  // Add revenue
+  act2Revenue += offerCard.offerPrice;
+
+  // Calculate profit
+  var profit = offerCard.offerPrice - invItem.cost;
+
+  if (profit >= 0) {
+    // Good deal: green floating text, coin sound, green particles
+    spawnFloatingText(offerCard.x, offerCard.y + 10, profit, false, false);
+    spawnLabelText(offerCard.x, offerCard.y - 15, 'Vendu !', '50, 180, 80', 16);
+    spawnParticles(offerCard.x, offerCard.y, false, 12, offerCard.isGolden);
+    SoundEngine.playCoin(0);
+    if (offerCard.isGolden) {
+      SoundEngine.playJackpot();
+    }
+  } else {
+    // Bad deal: red floating text, penalty sound, red particles
+    spawnFloatingText(offerCard.x, offerCard.y + 10, profit, true, false);
+    spawnLabelText(offerCard.x, offerCard.y - 15, 'Mauvaise affaire !', '220, 50, 50', 14);
+    spawnParticles(offerCard.x, offerCard.y, true, 12, false);
+    SoundEngine.playPenalty();
+  }
+
+  // Haptic feedback
+  hapticFeedback(30);
+
+  // Create split halves for visual effect
+  var slashAngle = 0; // horizontal split for accepted offers
+  var halves = createSplitHalves(offerCard, slashAngle);
+  for (var i = 0; i < halves.length; i++) {
+    splitHalves.push(halves[i]);
+  }
+
+  // Remove from active array
+  var idx = watches.indexOf(offerCard);
+  if (idx !== -1) watches.splice(idx, 1);
+}
+
+// --- Act 2: Reject Offer ---
+
+function rejectOffer(offerCard) {
+  // Mark to prevent re-detection
+  offerCard.slashed = true;
+
+  // Release the inventory item for future offers
+  inventory[offerCard.targetIndex].offerPending = false;
+
+  // Fling card leftward
+  offerCard.vx = -400;
+  offerCard.vy = -150;
+
+  // Show "Refuse" floating text
+  spawnLabelText(offerCard.x, offerCard.y, 'Refus\u00e9', '255, 255, 255', 14);
+
+  // No sound for rejects (silence = neutral action)
+  // Do NOT remove from watches -- let it fly off and get cleaned up by updateWatches
+}
+
 // --- Slash Handler ---
 
 function addToInventory(watch) {
