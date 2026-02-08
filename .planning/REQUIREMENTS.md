@@ -70,12 +70,12 @@
 
 ### Sound Effects
 
-- [ ] **SFX-01**: Slash swoosh sound on swipe
-- [ ] **SFX-02**: Impact sound on successful card hit
-- [ ] **SFX-03**: Coin/cha-ching sound on good deal
-- [ ] **SFX-04**: Penalty buzz sound on fake/bad deal
-- [ ] **SFX-05**: Jackpot sound for golden watches
-- [ ] **SFX-06**: All sounds generated via Web Audio API procedural synthesis (no audio files)
+- [x] **SFX-01**: Slash swoosh sound on swipe
+- [x] **SFX-02**: Impact sound on successful card hit
+- [x] **SFX-03**: Coin/cha-ching sound on good deal
+- [x] **SFX-04**: Penalty buzz sound on fake/bad deal
+- [x] **SFX-05**: Jackpot sound for golden watches
+- [x] **SFX-06**: All sounds generated via Web Audio API procedural synthesis (no audio files)
 
 ## Future Requirements
 
@@ -140,12 +140,12 @@
 | CARD-04 | Phase 4 | Complete |
 | CARD-05 | Phase 4 | Complete |
 | CARD-06 | Phase 4 | Complete |
-| SFX-01 | Phase 5 | Pending |
-| SFX-02 | Phase 5 | Pending |
-| SFX-03 | Phase 5 | Pending |
-| SFX-04 | Phase 5 | Pending |
-| SFX-05 | Phase 5 | Pending |
-| SFX-06 | Phase 5 | Pending |
+| SFX-01 | Phase 5 | Complete |
+| SFX-02 | Phase 5 | Complete |
+| SFX-03 | Phase 5 | Complete |
+| SFX-04 | Phase 5 | Complete |
+| SFX-05 | Phase 5 | Complete |
+| SFX-06 | Phase 5 | Complete |
 | MECH-01 | Phase 6 | Pending |
 | MECH-02 | Phase 6 | Pending |
 | MECH-03 | Phase 6 | Pending |

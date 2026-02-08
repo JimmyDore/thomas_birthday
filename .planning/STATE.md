@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Milestone v1.1 -- Phase 4.1: Dynamics Tuning
+**Current focus:** Milestone v1.1 -- Phase 5: Sound Effects
 
 ## Current Position
 
-Phase: 4.1 of 6 (Dynamics Tuning)
+Phase: 5 of 6 (Sound Effects)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-02-08 -- Completed 04.1-01-PLAN.md
+Last activity: 2026-02-08 -- Completed 05-01-PLAN.md
 
-Progress: [=========░] 91% (10/11 total plans across v1.0+v1.1)
+Progress: [==========░] 92% (11/12 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -24,10 +24,11 @@ Progress: [=========░] 91% (10/11 total plans across v1.0+v1.1)
 - Total execution time: 22min
 
 **v1.1 Stats:**
-- Plans completed: 3
+- Plans completed: 4
 - 04-01: 2min
 - 04-02: 2min
 - 04.1-01: 2min
+- 05-01: 2min
 
 ## Accumulated Context
 
@@ -52,6 +53,8 @@ New v1.1 decisions:
 - [04-02]: All fakes visually identical to reals -- readability and fake detection relies on brand text spelling
 - [04.1-01]: Speed multiplier capped at 1.4x -- difficulty via spawn rate and fakes, not raw speed
 - [04.1-01]: Spawn floor raised 0.3s->0.5s to prevent visual clutter with slower cards
+- [05-01]: SoundEngine IIFE owns single AudioContext + pre-generated noise buffer
+- [05-01]: Combo pitch escalation via semitone multiplier, capped at 12 steps
 
 ### Roadmap Evolution
 
@@ -68,5 +71,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 04.1-01-PLAN.md (Dynamics Tuning)
+Stopped at: Completed 05-01-PLAN.md (Sound Effects)
 Resume file: None

@@ -76,7 +76,7 @@ Plans:
 
 - [x] **Phase 4: Vinted Cards** - Watches become readable Vinted-style listing cards with proper split animation
 - [x] **Phase 4.1: Dynamics Tuning** - Tune card flight speed, arcs, and rotation for comfortable brand readability
-- [ ] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
+- [x] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
 - [ ] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
 
 ## Phase Details
@@ -121,7 +121,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md -- SoundEngine with procedural synthesis (swoosh, impact, coin, penalty, jackpot) wired into all game events
+- [x] 05-01-PLAN.md -- SoundEngine with procedural synthesis (swoosh, impact, coin, penalty, jackpot) wired into all game events
 
 ### Phase 6: Buy/Sell Mechanic
 **Goal**: The game has two acts -- Act 1 "Les Achats" where the player buys watches and Act 2 "La Revente" where the player sells inventory to buyers -- with a combined final score
@@ -151,5 +151,5 @@ Plans:
 | 3. Ship It | v1.0 | 2/2 | Complete | 2026-02-07 |
 | 4. Vinted Cards | v1.1 | 2/2 | Complete | 2026-02-08 |
 | 4.1 Dynamics Tuning | v1.1 | 1/1 | Complete | 2026-02-08 |
-| 5. Sound Effects | v1.1 | 0/1 | Not started | - |
+| 5. Sound Effects | v1.1 | 1/1 | Complete | 2026-02-08 |
 | 6. Buy/Sell Mechanic | v1.1 | 0/2 | Not started | - |
