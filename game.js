@@ -1022,8 +1022,16 @@ function renderBackground() {
 // --- Score Display ---
 
 function renderScore() {
-  var sign = score >= 0 ? '+' : '';
-  var scoreText = sign + score + '\u20AC';
+  var scoreText;
+  var scoreColor;
+  if (gameState === 'act1') {
+    scoreText = 'D\u00e9pense: ' + act1Spending + ' EUR';
+    scoreColor = '#ffffff';
+  } else {
+    var sign = score >= 0 ? '+' : '';
+    scoreText = sign + score + '\u20AC';
+    scoreColor = score < 0 ? '#ff6666' : '#ffffff';
+  }
   ctx.font = 'bold 20px sans-serif';
   var textW = ctx.measureText(scoreText).width;
   var pillW = Math.max(80, textW + 24);
@@ -1037,7 +1045,7 @@ function renderScore() {
   // Score text (centered in pill)
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = score < 0 ? '#ff6666' : '#ffffff';
+  ctx.fillStyle = scoreColor;
   ctx.fillText(scoreText, 10 + pillW / 2, 28);
 }
 
@@ -1136,7 +1144,21 @@ function renderRating() {
 // --- Act 1 HUD ---
 
 function renderAct1HUD() {
-  // Stub -- Task 2 fills this in
+  // Act header centered below timer
+  ctx.save();
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Acte 1 : Les Achats', canvasWidth / 2, 55);
+
+  // Inventory counter
+  var countText = inventory.length + (inventory.length <= 1 ? ' montre achet\u00e9e' : ' montres achet\u00e9es');
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.textAlign = 'left';
+  ctx.fillText(countText, 14, 80);
+  ctx.restore();
 }
 
 // --- Transition Screen ---
@@ -1144,18 +1166,116 @@ function renderAct1HUD() {
 var vendreButton = { x: 0, y: 0, w: 200, h: 56 };
 
 function renderTransition(dt) {
-  // Stub -- Task 2 fills this in
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   renderBackground();
+
+  var cx = canvasWidth / 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
+  var isEmpty = inventory.length === 0;
+
+  // Header (~8% height)
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 24px sans-serif';
-  ctx.fillText('Transition...', canvasWidth / 2, canvasHeight / 2);
+  ctx.fillText('Acte 1 termin\u00e9 !', cx, canvasHeight * 0.08);
+
+  // Spending total (~13% height)
+  ctx.font = '18px sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('D\u00e9pense totale : ' + act1Spending + ' EUR', cx, canvasHeight * 0.13);
+
+  if (isEmpty) {
+    // Empty inventory message
+    ctx.font = 'italic 18px sans-serif';
+    ctx.fillStyle = '#ff6666';
+    ctx.fillText('Aucune montre achet\u00e9e !', cx, canvasHeight * 0.3);
+    ctx.fillText('Tu pars les mains vides...', cx, canvasHeight * 0.3 + 26);
+  } else {
+    // Inventory list (~20% height, compact)
+    ctx.font = '16px sans-serif';
+    var listStartY = canvasHeight * 0.20;
+    var lineSpacing = 20;
+    var maxVisible = 7;
+    var showCount = Math.min(inventory.length, maxVisible);
+
+    for (var i = 0; i < showCount; i++) {
+      var item = inventory[i];
+      if (item.isGolden) {
+        ctx.fillStyle = '#FFD700';
+      } else if (item.isFake) {
+        ctx.fillStyle = '#ff6666';
+      } else {
+        ctx.fillStyle = '#ffffff';
+      }
+      ctx.fillText(item.brand + ' - ' + item.price + ' EUR', cx, listStartY + i * lineSpacing);
+    }
+
+    if (inventory.length > maxVisible) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = 'italic 14px sans-serif';
+      ctx.fillText('... et ' + (inventory.length - maxVisible) + ' autre(s)', cx, listStartY + showCount * lineSpacing);
+    }
+
+    // Fake reveal section (~70% height)
+    var fakeCount = 0;
+    for (var j = 0; j < inventory.length; j++) {
+      if (inventory[j].isFake) fakeCount++;
+    }
+
+    if (fakeCount > 0) {
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = '#ff6666';
+      ctx.fillText('Oups, ' + fakeCount + ' contrefacon(s) dans le lot !', cx, canvasHeight * 0.70);
+    } else {
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = '#50e880';
+      ctx.fillText('Aucune contrefacon, bien jou\u00e9 !', cx, canvasHeight * 0.70);
+    }
+  }
+
+  // Button (~85% height)
+  vendreButton.w = 200;
+  vendreButton.h = 56;
+  vendreButton.x = cx - vendreButton.w / 2;
+  vendreButton.y = canvasHeight * 0.85 - vendreButton.h / 2;
+
+  // Button background (white rounded rect)
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  roundRect(ctx, vendreButton.x, vendreButton.y, vendreButton.w, vendreButton.h, 12);
+  ctx.fill();
+
+  // Button text
+  ctx.fillStyle = '#007782';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isEmpty ? 'R\u00e9sultats' : 'Vendre !', cx, vendreButton.y + vendreButton.h / 2);
 }
 
 function handleTransitionTap(px, py) {
-  // Stub -- Task 2 fills this in
+  if (px >= vendreButton.x && px <= vendreButton.x + vendreButton.w &&
+      py >= vendreButton.y && py <= vendreButton.y + vendreButton.h) {
+    if (inventory.length === 0) {
+      // No watches bought -- skip to game over
+      isNewBest = saveBestScore(score);
+      gameState = 'over';
+    } else {
+      // Advance to Act 2
+      gameState = 'act2';
+      act2Elapsed = 0;
+      spawnTimer = 0;
+      watches.length = 0;
+      splitHalves.length = 0;
+      particles.length = 0;
+      floatingTexts.length = 0;
+      trailPoints.length = 0;
+      lastTime = 0;
+      combo = 0;
+      comboMultiplier = 1;
+    }
+  }
 }
 
 // --- Start Screen ---
