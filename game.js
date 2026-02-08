@@ -299,10 +299,10 @@ function getMultiplier(c) {
 // --- Vinted Seller Rating ---
 
 function getRating(s) {
-  if (s >= 300) return { stars: 5, label: 'Roi du Vinted' };
-  if (s >= 150) return { stars: 4, label: 'Vendeur confirm\u00e9' };
-  if (s >= 50)  return { stars: 3, label: 'Bon vendeur' };
-  if (s >= 0)   return { stars: 2, label: 'Vendeur d\u00e9butant' };
+  if (s >= 100) return { stars: 5, label: 'Roi du Vinted' };
+  if (s >= 40)  return { stars: 4, label: 'Vendeur confirm\u00e9' };
+  if (s >= 0)   return { stars: 3, label: 'Bon vendeur' };
+  if (s >= -50) return { stars: 2, label: 'Vendeur d\u00e9butant' };
   return { stars: 1, label: 'Vendeur douteux' };
 }
 
@@ -1706,60 +1706,79 @@ function renderGameOver() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // 1. Header (~12% height)
+  // 1. Header (~8% height)
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 28px sans-serif';
-  ctx.fillText('Temps \u00e9coul\u00e9 !', cx, canvasHeight * 0.12);
+  ctx.font = 'bold 24px sans-serif';
+  if (allSoldEarly) {
+    ctx.fillText('Tout vendu ! Bravo !', cx, canvasHeight * 0.08);
+  } else {
+    ctx.fillText('Temps \u00e9coul\u00e9 !', cx, canvasHeight * 0.08);
+  }
 
-  // 2. Stats block (~25% height)
-  ctx.font = '18px sans-serif';
+  // 2. Act 1 section (~16% height)
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = '#ff9999';
+  ctx.fillText('Acte 1 - D\u00e9penses : -' + act1Spending + ' EUR', cx, canvasHeight * 0.16);
+
+  // Count fakes in inventory
+  var fakeCount = 0;
+  for (var f = 0; f < inventory.length; f++) {
+    if (inventory[f].isFake) fakeCount++;
+  }
+  ctx.font = '14px sans-serif';
   ctx.fillStyle = '#ffffff';
-  var lineY = canvasHeight * 0.22;
-  var lineGap = 26;
+  ctx.fillText('Montres achet\u00e9es : ' + inventory.length + ' (dont ' + fakeCount + ' contrefacon(s))', cx, canvasHeight * 0.16 + 22);
 
-  ctx.fillText('Montres vendues : ' + stats.realSlashed, cx, lineY);
-  lineY += lineGap;
-  ctx.fillText('Contrefa\u00e7ons tranch\u00e9es : ' + stats.fakeSlashed, cx, lineY);
-  lineY += lineGap;
+  // 3. Act 2 section (~24% height)
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillStyle = '#99ff99';
+  ctx.fillText('Acte 2 - Recettes : +' + act2Revenue + ' EUR', cx, canvasHeight * 0.26);
 
-  // Final profit with sign
+  // Count sold items
+  var soldCount = 0;
+  for (var s = 0; s < inventory.length; s++) {
+    if (inventory[s].sold) soldCount++;
+  }
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('Montres vendues : ' + soldCount + ' / ' + inventory.length, cx, canvasHeight * 0.26 + 22);
+
+  // 4. Unsold section (~34% height)
+  var unsoldCount = 0;
+  var unsoldLoss = 0;
+  for (var u = 0; u < inventory.length; u++) {
+    if (!inventory[u].sold) {
+      unsoldCount++;
+      unsoldLoss += inventory[u].cost;
+    }
+  }
+  if (unsoldCount > 0) {
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#ff6666';
+    ctx.fillText('Invendus (' + unsoldCount + ') : -' + unsoldLoss + ' EUR', cx, canvasHeight * 0.34);
+  }
+
+  // 5. Final profit (~42% height)
   var profitSign = score >= 0 ? '+' : '';
   ctx.font = 'bold 22px sans-serif';
   ctx.fillStyle = score >= 0 ? '#50e880' : '#ff6666';
-  ctx.fillText('Profit final : ' + profitSign + score + '\u20AC', cx, lineY);
-  lineY += lineGap;
+  ctx.fillText('Profit final : ' + profitSign + score + ' EUR', cx, canvasHeight * 0.42);
 
-  // Optional: golden watches slashed
-  ctx.font = '18px sans-serif';
-  ctx.fillStyle = '#ffffff';
-  if (stats.goldenSlashed > 0) {
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText('Montres en or : ' + stats.goldenSlashed, cx, lineY);
-    lineY += lineGap;
-    ctx.fillStyle = '#ffffff';
-  }
-
-  // Optional: max combo
-  if (stats.maxCombo >= 3) {
-    ctx.fillText('Meilleur combo : x' + getMultiplier(stats.maxCombo), cx, lineY);
-    lineY += lineGap;
-  }
-
-  // Best score display
+  // Best score below profit
+  var bestY = canvasHeight * 0.42 + 28;
   if (bestScore !== null) {
-    ctx.font = 'bold 18px sans-serif';
+    ctx.font = 'bold 16px sans-serif';
     ctx.fillStyle = '#FFD700';
-    ctx.fillText('Record : ' + (bestScore >= 0 ? '+' : '') + bestScore + '\u20AC', cx, lineY);
-    lineY += lineGap;
+    ctx.fillText('Record : ' + (bestScore >= 0 ? '+' : '') + bestScore + ' EUR', cx, bestY);
+    bestY += 20;
   }
   if (isNewBest) {
-    ctx.font = 'bold 16px sans-serif';
+    ctx.font = 'bold 14px sans-serif';
     ctx.fillStyle = '#50e880';
-    ctx.fillText('Nouveau record !', cx, lineY);
-    lineY += lineGap;
+    ctx.fillText('Nouveau record !', cx, bestY);
   }
 
-  // 3. Vinted rating verdict (~50% height, large and prominent)
+  // 6. Vinted seller rating (~54% height)
   var rating = getRating(score);
   var starStr = '';
   for (var i = 0; i < 5; i++) {
@@ -1768,34 +1787,34 @@ function renderGameOver() {
 
   ctx.font = 'bold 24px sans-serif';
   ctx.fillStyle = '#FFD700';
-  ctx.fillText(starStr, cx, canvasHeight * 0.52);
+  ctx.fillText(starStr, cx, canvasHeight * 0.54);
 
-  ctx.font = 'bold 18px sans-serif';
+  ctx.font = 'bold 16px sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(rating.label, cx, canvasHeight * 0.52 + 28);
+  ctx.fillText(rating.label, cx, canvasHeight * 0.54 + 26);
 
-  // 4. Birthday message (~62% height)
+  // 7. Birthday message (~66% height)
   // Decorative stars above message
   ctx.font = '14px sans-serif';
   ctx.fillStyle = '#FFD700';
-  ctx.fillText('\u2605  \u2605  \u2605', cx, canvasHeight * 0.63);
+  ctx.fillText('\u2605  \u2605  \u2605', cx, canvasHeight * 0.64);
 
-  ctx.font = 'italic 18px sans-serif';
+  ctx.font = 'italic 16px sans-serif';
   ctx.fillStyle = '#ffe0a0';
-  ctx.fillText('Joyeux anniversaire mon fr\u00e8re,', cx, canvasHeight * 0.67);
-  ctx.fillText('longue vie aux montres', cx, canvasHeight * 0.67 + 24);
-  ctx.fillText('et \u00e0 Montignac', cx, canvasHeight * 0.67 + 48);
+  ctx.fillText('Joyeux anniversaire mon fr\u00e8re,', cx, canvasHeight * 0.68);
+  ctx.fillText('longue vie aux montres', cx, canvasHeight * 0.68 + 22);
+  ctx.fillText('et \u00e0 Montignac', cx, canvasHeight * 0.68 + 44);
 
   // Decorative stars below message
   ctx.font = '14px sans-serif';
   ctx.fillStyle = '#FFD700';
-  ctx.fillText('\u2605  \u2605  \u2605', cx, canvasHeight * 0.67 + 72);
+  ctx.fillText('\u2605  \u2605  \u2605', cx, canvasHeight * 0.68 + 64);
 
-  // 5. Replay button (~85% height)
+  // 8. Replay button (~87% height)
   replayButton.w = 200;
   replayButton.h = 56;
   replayButton.x = cx - replayButton.w / 2;
-  replayButton.y = canvasHeight * 0.85 - replayButton.h / 2;
+  replayButton.y = canvasHeight * 0.87 - replayButton.h / 2;
 
   // Button background (white rounded rect)
   ctx.fillStyle = '#ffffff';
