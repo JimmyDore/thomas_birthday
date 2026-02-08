@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Milestone v1.1 -- Phase 4: Vinted Cards
+**Current focus:** Milestone v1.1 -- Phase 4.1: Dynamics Tuning
 
 ## Current Position
 
-Phase: 4 of 6 (Vinted Cards)
-Plan: 2 of 2 in current phase
+Phase: 4.1 of 6 (Dynamics Tuning)
+Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-02-08 -- Completed 04-02-PLAN.md
+Last activity: 2026-02-08 -- Completed 04.1-01-PLAN.md
 
-Progress: [=========░] 90% (9/10 total plans across v1.0+v1.1)
+Progress: [=========░] 91% (10/11 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -24,9 +24,10 @@ Progress: [=========░] 90% (9/10 total plans across v1.0+v1.1)
 - Total execution time: 22min
 
 **v1.1 Stats:**
-- Plans completed: 2
+- Plans completed: 3
 - 04-01: 2min
 - 04-02: 2min
+- 04.1-01: 2min
 
 ## Accumulated Context
 
@@ -49,6 +50,12 @@ New v1.1 decisions:
 - [04-01]: Single drawCardToCanvas handles both white and golden cards via isGolden flag
 - [04-01]: Cards carry decorative price property (10-99 EUR normal, 200-499 EUR golden)
 - [04-02]: All fakes visually identical to reals -- readability and fake detection relies on brand text spelling
+- [04.1-01]: Speed multiplier capped at 1.4x -- difficulty via spawn rate and fakes, not raw speed
+- [04.1-01]: Spawn floor raised 0.3s->0.5s to prevent visual clutter with slower cards
+
+### Roadmap Evolution
+
+- Phase 4.1 inserted after Phase 4: Dynamics tuning -- card flight speed too fast for comfortable brand reading (URGENT)
 
 ### Pending Todos
 
@@ -56,10 +63,10 @@ None.
 
 ### Blockers/Concerns
 
-- [04-02]: Card flight speed too fast for comfortable brand name reading -- needs dedicated dynamics tuning phase for polish
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 04-02-PLAN.md
+Stopped at: Completed 04.1-01-PLAN.md (Dynamics Tuning)
 Resume file: None
