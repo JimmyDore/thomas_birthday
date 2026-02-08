@@ -68,7 +68,7 @@ let spawnTimer = 0;
 
 // --- Watch Constants ---
 var SPAWN_INTERVAL = 1.2; // seconds between spawns (fixed for Phase 1)
-var GRAVITY = 600;        // pixels/sec^2
+var GRAVITY = 400;        // pixels/sec^2
 var WATCH_SIZE = 60;      // diameter in CSS pixels
 var FAKE_NAMES = ['Montignak', 'Montinyac', 'Montiganc', 'Montigniak', 'Montignaq'];
 
@@ -204,8 +204,8 @@ function getDifficulty() {
   var t = Math.min(1, elapsed / ROUND_DURATION);
   var tEased = t * t; // quadratic ease-in: slow start, frantic end
   return {
-    spawnInterval: Math.max(0.3, 1.2 - tEased * 0.9),  // 1.2s -> 0.3s
-    speedMultiplier: 1.0 + t * 0.8,                      // 1.0x -> 1.8x
+    spawnInterval: Math.max(0.5, 1.4 - tEased * 0.9),  // 1.4s -> 0.5s
+    speedMultiplier: 1.0 + t * 0.4,                      // 1.0x -> 1.4x
     fakeChance: 0.20 + t * 0.45                             // 20% -> 65%
   };
 }
@@ -221,12 +221,12 @@ function spawnWatch(diff) {
     : canvasWidth * (0.6 + Math.random() * 0.3);
 
   var vx = fromLeft
-    ? (30 + Math.random() * 80) * speedMult
-    : -(30 + Math.random() * 80) * speedMult;
+    ? (20 + Math.random() * 60) * speedMult
+    : -(20 + Math.random() * 60) * speedMult;
 
   // Scale launch velocity with screen height so watches reach upper third
-  var baseVy = canvasHeight * 0.9 + 200;
-  var vy = -(baseVy + Math.random() * canvasHeight * 0.25) * speedMult;
+  var baseVy = canvasHeight * 0.65 + 100;
+  var vy = -(baseVy + Math.random() * canvasHeight * 0.15) * speedMult;
 
   var isFake = Math.random() < fakeChance;
   var isGolden = !isFake && Math.random() < 0.03; // 3% of real watches
