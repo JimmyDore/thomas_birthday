@@ -646,10 +646,7 @@ function getSwipeDirection(points) {
 function checkAct2Collisions() {
   if (trailPoints.length < 2) return;
 
-  var direction = getSwipeDirection(trailPoints);
-  if (direction === null) return; // no clear directional swipe
-
-  // Same trail segment check as checkSlashCollisions
+  // Any slash = accept (same mechanic as Act 1; let card fall to skip)
   var start = Math.max(0, trailPoints.length - 6);
   for (var i = start + 1; i < trailPoints.length; i++) {
     var p0 = trailPoints[i - 1];
@@ -662,11 +659,7 @@ function checkAct2Collisions() {
 
       var hitRadius = Math.max(w.width, w.height) / 2 * 1.1;
       if (lineSegmentIntersectsCircle(p0.x, p0.y, p1.x, p1.y, w.x, w.y, hitRadius)) {
-        if (direction === 'right') {
-          acceptOffer(w);
-        } else {
-          rejectOffer(w);
-        }
+        acceptOffer(w);
       }
     }
   }
@@ -1156,23 +1149,15 @@ function drawBuyerCardToCanvas(offCtx, ox, oy, card) {
   offCtx.fillStyle = '#333333';
   offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.35);
 
-  // Purchase cost at ~55% height (subtle gray)
-  offCtx.font = '13px sans-serif';
-  offCtx.fillStyle = '#777777';
-  offCtx.fillText('Achete: ' + card.cost + ' EUR', ox + w / 2, oy + h * 0.55);
+  // Purchase cost at ~55% height (subtle gray, small)
+  offCtx.font = '10px sans-serif';
+  offCtx.fillStyle = '#999999';
+  offCtx.fillText('Paye: ' + card.cost + ' EUR', ox + w / 2, oy + h * 0.55);
 
   // Offer price at ~73% height (neutral dark blue — no green/red hint)
   offCtx.font = 'bold 18px sans-serif';
   offCtx.fillStyle = '#1a5276';
   offCtx.fillText(card.offerPrice + ' EUR', ox + w / 2, oy + h * 0.73);
-
-  // Directional hints at bottom (~92% height)
-  offCtx.font = '9px sans-serif';
-  offCtx.fillStyle = 'rgba(0,0,0,0.3)';
-  offCtx.textAlign = 'left';
-  offCtx.fillText('\u2190 non', ox + 6, oy + h * 0.92);
-  offCtx.textAlign = 'right';
-  offCtx.fillText('oui \u2192', ox + w - 6, oy + h * 0.92);
 }
 
 function createBuyerSprite(card) {
@@ -1301,16 +1286,7 @@ function renderTrail() {
   var now = performance.now();
   ctx.lineCap = 'round';
 
-  // Act 2 trail color: green for right swipe, red for left swipe
   var trailColor = TRAIL_COLOR;
-  if (gameState === 'act2' && trailPoints.length >= 3) {
-    var dir = getSwipeDirection(trailPoints);
-    if (dir === 'right') {
-      trailColor = '100, 220, 100';
-    } else if (dir === 'left') {
-      trailColor = '220, 100, 100';
-    }
-  }
 
   for (var i = 1; i < trailPoints.length; i++) {
     var p0 = trailPoints[i - 1];
