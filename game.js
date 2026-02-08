@@ -10,7 +10,7 @@ let canvasHeight = 0;
 let dpr = 1;
 
 // --- Game State ---
-var gameState = 'start'; // 'start' | 'playing' | 'over'
+var gameState = 'start'; // 'start' | 'act1' | 'transition' | 'act2' | 'over'
 var ROUND_DURATION = 60;  // seconds
 var elapsed = 0;
 var stats = { realSlashed: 0, fakeSlashed: 0, goldenSlashed: 0, maxCombo: 0, totalWatches: 0 };
@@ -20,6 +20,14 @@ var comboMultiplier = 1;
 var comboDisplayScale = 1.0; // for brief scale-up animation
 let paused = false;
 let lastTime = 0;
+
+// --- Buy/Sell Mechanic State ---
+var inventory = [];        // [{brand, price, isFake, isGolden, cost, sold, soldFor}]
+var act1Spending = 0;      // Total EUR spent in Act 1 (absolute values)
+var act2Revenue = 0;       // Total EUR earned in Act 2
+var ACT2_DURATION = 45;    // seconds
+var act2Elapsed = 0;
+var currentOfferIndex = 0; // Round-robin index for buyer offers
 
 // --- High Score Persistence ---
 var STORAGE_KEY = 'watchNinja_bestScore';
@@ -344,7 +352,13 @@ function setupInput() {
       return;
     }
 
-    // gameState === 'playing' -- swipe logic
+    if (gameState === 'transition') {
+      handleTransitionTap(px, py);
+      return;
+    }
+
+    // gameState === 'act1' or 'act2' -- swipe logic
+    if (gameState !== 'act1' && gameState !== 'act2') return;
     isPointerDown = true;
     SoundEngine.playSwipe();
     trailPoints.length = 0; // Clear old trail on new swipe
@@ -353,7 +367,7 @@ function setupInput() {
 
   canvas.addEventListener('pointermove', function (e) {
     e.preventDefault();
-    if (gameState !== 'playing') return;
+    if (gameState !== 'act1' && gameState !== 'act2') return;
     if (!isPointerDown) return;
     var rect = canvas.getBoundingClientRect();
     trailPoints.push({
@@ -459,8 +473,8 @@ function updateWatches(dt) {
 
     // Off-screen cleanup: fell below bottom
     if (w.y > canvasHeight + 100 && w.vy > 0) {
-      // Missed penalty: real Montignac not slashed
-      if (!w.slashed && !w.isFake) {
+      // Missed penalty: real Montignac not slashed (Act 1 only)
+      if (!w.slashed && !w.isFake && gameState === 'act1') {
         score -= 8;
         combo = 0;
         comboMultiplier = 1;
@@ -472,8 +486,8 @@ function updateWatches(dt) {
 
     // Off-screen cleanup: too far left or right
     if (w.x < -200 || w.x > canvasWidth + 200) {
-      // Also penalize if real and unslashed
-      if (!w.slashed && !w.isFake) {
+      // Also penalize if real and unslashed (Act 1 only)
+      if (!w.slashed && !w.isFake && gameState === 'act1') {
         score -= 8;
         combo = 0;
         comboMultiplier = 1;
@@ -596,9 +610,27 @@ function checkSlashCollisions() {
 
 // --- Slash Handler ---
 
+function addToInventory(watch) {
+  inventory.push({
+    brand: watch.brand,
+    price: watch.price,
+    isFake: watch.isFake,
+    isGolden: watch.isGolden,
+    cost: Math.abs(watch.value),
+    sold: false,
+    soldFor: 0
+  });
+}
+
 function slashWatch(watch, slashAngle) {
   // Mark immediately to prevent double-detection (Pitfall 5)
   watch.slashed = true;
+
+  // Inventory recording for Act 1
+  if (gameState === 'act1') {
+    addToInventory(watch);
+    act1Spending += Math.abs(watch.value);
+  }
 
   // Combo system: real watches build combo, fakes reset it
   if (!watch.isFake) {
@@ -1101,6 +1133,31 @@ function renderRating() {
   ctx.fillText(rating.label, canvasWidth - 10 - pillW / 2, 38);
 }
 
+// --- Act 1 HUD ---
+
+function renderAct1HUD() {
+  // Stub -- Task 2 fills this in
+}
+
+// --- Transition Screen ---
+
+var vendreButton = { x: 0, y: 0, w: 200, h: 56 };
+
+function renderTransition(dt) {
+  // Stub -- Task 2 fills this in
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  renderBackground();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('Transition...', canvasWidth / 2, canvasHeight / 2);
+}
+
+function handleTransitionTap(px, py) {
+  // Stub -- Task 2 fills this in
+}
+
 // --- Start Screen ---
 
 var startButton = { x: 0, y: 0, w: 200, h: 56 };
@@ -1329,7 +1386,7 @@ function handleReplayTap(px, py) {
 
 function startGame() {
   resetGame();
-  gameState = 'playing';
+  gameState = 'act1';
   lastTime = 0;
 }
 
@@ -1349,18 +1406,22 @@ function resetGame() {
   isNewBest = false;
   stats = { realSlashed: 0, fakeSlashed: 0, goldenSlashed: 0, maxCombo: 0, totalWatches: 0 };
   lastTime = 0;
+  inventory.length = 0;
+  act1Spending = 0;
+  act2Revenue = 0;
+  act2Elapsed = 0;
+  currentOfferIndex = 0;
 }
 
 // --- Game Loop ---
 
-function update(dt) {
+function updateAct1(dt) {
   updateTrail();
 
   // Timer
   elapsed += dt;
   if (elapsed >= ROUND_DURATION) {
-    isNewBest = saveBestScore(score);
-    gameState = 'over';
+    gameState = 'transition';
     return;
   }
 
@@ -1383,7 +1444,7 @@ function update(dt) {
   updateFloatingTexts(dt);
 }
 
-function render(dt) {
+function renderAct1(dt) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   renderBackground();
 
@@ -1400,6 +1461,7 @@ function render(dt) {
   renderTimer();
   renderCombo(dt);
   renderRating();
+  renderAct1HUD();
 }
 
 function gameLoop(timestamp) {
@@ -1416,9 +1478,22 @@ function gameLoop(timestamp) {
 
   if (gameState === 'start') {
     renderStart(dt);
-  } else if (gameState === 'playing') {
-    update(dt);
-    render(dt);
+  } else if (gameState === 'act1') {
+    updateAct1(dt);
+    renderAct1(dt);
+  } else if (gameState === 'transition') {
+    renderTransition(dt);
+  } else if (gameState === 'act2') {
+    // Act 2 stub -- Plan 02 fills this in
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    renderBackground();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillText('Acte 2 : Les Ventes', canvasWidth / 2, canvasHeight / 2 - 20);
+    ctx.font = '16px sans-serif';
+    ctx.fillText('A venir...', canvasWidth / 2, canvasHeight / 2 + 20);
   } else if (gameState === 'over') {
     renderGameOver();
   }
