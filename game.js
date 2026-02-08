@@ -90,7 +90,8 @@ function pickFakeName(t) {
   var idx = tierStart + Math.floor(Math.random() * (tierEnd - tierStart));
   return FAKE_NAMES_PROGRESSION[Math.min(idx, len - 1)];
 }
-var WATCH_STYLES = ['round', 'square', 'sport'];
+var CARD_WIDTH = 80;
+var CARD_HEIGHT = 110;
 
 // --- Combo Multiplier ---
 
@@ -235,30 +236,36 @@ function spawnWatch(diff) {
   var brand = isFake
     ? pickFakeName(Math.min(1, elapsed / ROUND_DURATION))
     : 'Montignac';
-  var style = WATCH_STYLES[Math.floor(Math.random() * WATCH_STYLES.length)];
 
   // Sneaky fakes use same green color as real -- only misspelled name distinguishes them
   var sneaky = isFake && Math.random() < sneakyChance;
 
   var watchSize = isGolden ? WATCH_SIZE * 1.2 : WATCH_SIZE;
   var watchValue = isGolden ? 50 : (isFake ? -15 : 10);
+  var cardW = isGolden ? CARD_WIDTH * 1.2 : CARD_WIDTH;
+  var cardH = isGolden ? CARD_HEIGHT * 1.2 : CARD_HEIGHT;
+  var price = isGolden ? (200 + Math.floor(Math.random() * 300)) : (10 + Math.floor(Math.random() * 90));
 
-  watches.push({
+  var watch = {
     x: x,
     y: canvasHeight + 50, // start below visible area
     vx: vx,
     vy: vy,
     size: watchSize,
+    width: cardW,
+    height: cardH,
     rotation: 0,
     rotationSpeed: (Math.random() - 0.5) * 3,
     isFake: isFake,
     isGolden: isGolden,
     sneaky: sneaky,
     brand: brand,
-    style: style,
+    price: price,
     slashed: false,
     value: watchValue
-  });
+  };
+  createCardSprite(watch);
+  watches.push(watch);
 
   stats.totalWatches++;
 }
@@ -482,11 +489,15 @@ function createSplitHalves(watch, slashAngle) {
       rotation: watch.rotation,
       rotationSpeed: -(3 + Math.random() * 4),
       size: watch.size,
+      width: watch.width,
+      height: watch.height,
       brand: watch.brand,
       isFake: watch.isFake,
       isGolden: watch.isGolden,
       sneaky: watch.sneaky,
-      style: watch.style,
+      price: watch.price,
+      sprite: watch.sprite,
+      spritePadding: watch.spritePadding,
       clipSide: 'left',
       alpha: 1.0,
       life: 1.0,
@@ -500,11 +511,15 @@ function createSplitHalves(watch, slashAngle) {
       rotation: watch.rotation,
       rotationSpeed: 3 + Math.random() * 4,
       size: watch.size,
+      width: watch.width,
+      height: watch.height,
       brand: watch.brand,
       isFake: watch.isFake,
       isGolden: watch.isGolden,
       sneaky: watch.sneaky,
-      style: watch.style,
+      price: watch.price,
+      sprite: watch.sprite,
+      spritePadding: watch.spritePadding,
       clipSide: 'right',
       alpha: 1.0,
       life: 1.0,
@@ -543,7 +558,7 @@ function renderHalf(ctx, half) {
   ctx.globalAlpha = half.alpha;
 
   // Clip to one side
-  var large = half.size * 2;
+  var large = Math.max(half.width, half.height) * 2;
   ctx.beginPath();
   if (half.clipSide === 'right') {
     ctx.rect(0, -large, large, large * 2);
@@ -552,36 +567,13 @@ function renderHalf(ctx, half) {
   }
   ctx.clip();
 
-  // Draw the full watch at origin (already translated/rotated)
-  // Create a temporary watch-like object at (0,0) with no rotation
-  var tempWatch = {
-    x: 0,
-    y: 0,
-    size: half.size,
-    rotation: 0,
-    isFake: half.isFake,
-    sneaky: half.sneaky,
-    brand: half.brand,
-    style: half.style
-  };
-
-  // Determine case color
-  var caseColor;
-  if (half.isGolden) {
-    caseColor = '#DAA520';
-  } else if (tempWatch.isFake && !tempWatch.sneaky) {
-    caseColor = '#cc3333';
-  } else {
-    caseColor = '#2a7d4f';
-  }
-
-  var r = tempWatch.size / 2;
-  if (tempWatch.style === 'round') {
-    drawRoundWatch(ctx, r, caseColor, tempWatch.brand, tempWatch.size);
-  } else if (tempWatch.style === 'square') {
-    drawSquareWatch(ctx, r, caseColor, tempWatch.brand, tempWatch.size);
-  } else {
-    drawSportWatch(ctx, r, caseColor, tempWatch.brand, tempWatch.size);
+  // Blit cached card sprite at origin (already translated/rotated)
+  if (half.sprite) {
+    var pad = half.spritePadding || 10;
+    var destW = half.width + pad * 2;
+    var destH = half.height + pad * 2;
+    ctx.drawImage(half.sprite, 0, 0, half.sprite.width, half.sprite.height,
+      -destW / 2, -destH / 2, destW, destH);
   }
 
   ctx.restore(); // CRITICAL: restores clip state
@@ -636,262 +628,133 @@ function renderParticles() {
   }
 }
 
-// --- Watch Drawing (3 styles) ---
+// --- Card Drawing (Vinted-style listing cards) ---
 
-function drawWatch(ctx, watch) {
-  var r = watch.size / 2;
-  // Determine case color: golden = gold, real = green, non-sneaky fakes = red, sneaky fakes = same green
-  var caseColor;
-  if (watch.isGolden) {
-    caseColor = '#DAA520';
-  } else if (watch.isFake && !watch.sneaky) {
-    caseColor = '#cc3333';
+function drawWatchIcon(ctx, cx, cy, r, isGolden) {
+  // Case circle
+  var caseColor = isGolden ? '#B8860B' : '#2a7d4f';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = caseColor;
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Cream dial
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.75, 0, Math.PI * 2);
+  ctx.fillStyle = '#f5f0e8';
+  ctx.fill();
+
+  // Hour markers at 12 and 6 only (simplified)
+  ctx.fillStyle = '#333';
+  ctx.fillRect(cx - 1.5, cy - r * 0.6, 3, 5);
+  ctx.fillRect(cx - 1.5, cy + r * 0.6 - 5, 3, 5);
+
+  // Hands: hour and minute
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx, cy - r * 0.45);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + r * 0.3, cy - r * 0.2);
+  ctx.stroke();
+}
+
+function drawCardToCanvas(offCtx, ox, oy, card) {
+  var w = card.width;
+  var h = card.height;
+  var isGolden = card.isGolden;
+  var cr = 8; // corner radius
+
+  // Drop shadow (OK -- runs ONCE at spawn, not per frame)
+  offCtx.save();
+  offCtx.shadowColor = 'rgba(0,0,0,0.25)';
+  offCtx.shadowBlur = 6;
+  offCtx.shadowOffsetX = 0;
+  offCtx.shadowOffsetY = 3;
+
+  // Card body
+  offCtx.beginPath();
+  offCtx.roundRect(ox, oy, w, h, cr);
+  if (isGolden) {
+    var grad = offCtx.createLinearGradient(ox, oy, ox, oy + h);
+    grad.addColorStop(0, '#DAA520');
+    grad.addColorStop(1, '#FFD700');
+    offCtx.fillStyle = grad;
   } else {
-    caseColor = '#2a7d4f';
+    offCtx.fillStyle = '#ffffff';
   }
+  offCtx.fill();
+  offCtx.restore(); // reset shadow
 
+  // Reset shadow explicitly
+  offCtx.shadowColor = 'transparent';
+
+  // Thin border
+  offCtx.beginPath();
+  offCtx.roundRect(ox, oy, w, h, cr);
+  offCtx.strokeStyle = isGolden ? '#B8860B' : '#e0e0e0';
+  offCtx.lineWidth = 1;
+  offCtx.stroke();
+
+  // Watch icon centered in top 60% of card
+  var iconCx = ox + w / 2;
+  var iconCy = oy + h * 0.32;
+  var iconR = Math.min(w, h * 0.6) * 0.28;
+  drawWatchIcon(offCtx, iconCx, iconCy, iconR, isGolden);
+
+  // Brand name at 75% height
+  var brandFontSize = Math.max(12, Math.min(16, w * 0.18));
+  offCtx.font = 'bold ' + brandFontSize + 'px sans-serif';
+  offCtx.textAlign = 'center';
+  offCtx.textBaseline = 'middle';
+  offCtx.fillStyle = isGolden ? '#5D4037' : '#333333';
+  offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.75);
+
+  // Price tag at 90% height
+  offCtx.font = '10px sans-serif';
+  offCtx.fillStyle = isGolden ? '#8B6914' : '#007782';
+  offCtx.fillText(card.price + ' EUR', ox + w / 2, oy + h * 0.9);
+}
+
+function createCardSprite(card) {
+  var padding = 10; // shadow bleed room
+  var spriteW = (card.width + padding * 2) * dpr;
+  var spriteH = (card.height + padding * 2) * dpr;
+
+  var offCanvas = document.createElement('canvas');
+  offCanvas.width = spriteW;
+  offCanvas.height = spriteH;
+  var offCtx = offCanvas.getContext('2d');
+  offCtx.scale(dpr, dpr);
+
+  drawCardToCanvas(offCtx, padding, padding, card);
+
+  card.sprite = offCanvas;
+  card.spritePadding = padding;
+}
+
+function drawCard(ctx, card) {
   ctx.save();
-  ctx.translate(watch.x, watch.y);
-  ctx.rotate(watch.rotation);
+  ctx.translate(card.x, card.y);
+  ctx.rotate(card.rotation);
 
-  if (watch.style === 'round') {
-    drawRoundWatch(ctx, r, caseColor, watch.brand, watch.size);
-  } else if (watch.style === 'square') {
-    drawSquareWatch(ctx, r, caseColor, watch.brand, watch.size);
-  } else {
-    drawSportWatch(ctx, r, caseColor, watch.brand, watch.size);
-  }
+  var pad = card.spritePadding || 10;
+  var destW = card.width + pad * 2;
+  var destH = card.height + pad * 2;
+  ctx.drawImage(card.sprite, 0, 0, card.sprite.width, card.sprite.height,
+    -destW / 2, -destH / 2, destW, destH);
 
   ctx.restore();
 }
 
-// -- Round Classic style --
-function drawRoundWatch(ctx, r, caseColor, brand, size) {
-  // Band stubs (brown leather)
-  ctx.fillStyle = '#8B4513';
-  ctx.fillRect(-8, -r - 18, 16, 10);
-  ctx.fillRect(-8, r + 8, 16, 10);
-
-  // Lugs
-  ctx.fillStyle = '#666';
-  ctx.fillRect(-6, -r - 10, 12, 10);
-  ctx.fillRect(-6, r, 12, 10);
-
-  // Case
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fillStyle = caseColor;
-  ctx.fill();
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Cream dial
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.75, 0, Math.PI * 2);
-  ctx.fillStyle = '#f5f0e8';
-  ctx.fill();
-
-  // Hour markers at 12, 3, 6, 9
-  ctx.fillStyle = '#333';
-  for (var i = 0; i < 4; i++) {
-    var angle = (i * Math.PI) / 2 - Math.PI / 2;
-    var mx = Math.cos(angle) * r * 0.6;
-    var my = Math.sin(angle) * r * 0.6;
-    ctx.fillRect(mx - 2, my - 2, 4, 4);
-  }
-
-  // Watch hands
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(0, -r * 0.5);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(r * 0.3, -r * 0.3);
-  ctx.stroke();
-
-  // Crown
-  ctx.beginPath();
-  ctx.arc(r + 4, 0, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#888';
-  ctx.fill();
-
-  // Brand name
-  drawBrandLabel(ctx, brand, r, size);
-}
-
-// -- Square Cushion style --
-function drawSquareWatch(ctx, r, caseColor, brand, size) {
-  var s = r * 0.85; // half-side of the square
-
-  // Band stubs (metal bracelet)
-  ctx.fillStyle = '#aaa';
-  ctx.fillRect(-10, -r - 16, 20, 10);
-  ctx.fillRect(-10, r + 6, 20, 10);
-
-  // Wider lugs
-  ctx.fillStyle = '#666';
-  ctx.fillRect(-8, -r - 8, 16, 10);
-  ctx.fillRect(-8, r - 2, 16, 10);
-
-  // Square case with rounded corners (manual path)
-  var cr = r * 0.2; // corner radius
-  ctx.beginPath();
-  ctx.moveTo(-s + cr, -s);
-  ctx.lineTo(s - cr, -s);
-  ctx.quadraticCurveTo(s, -s, s, -s + cr);
-  ctx.lineTo(s, s - cr);
-  ctx.quadraticCurveTo(s, s, s - cr, s);
-  ctx.lineTo(-s + cr, s);
-  ctx.quadraticCurveTo(-s, s, -s, s - cr);
-  ctx.lineTo(-s, -s + cr);
-  ctx.quadraticCurveTo(-s, -s, -s + cr, -s);
-  ctx.closePath();
-  ctx.fillStyle = caseColor;
-  ctx.fill();
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Cream dial (slightly smaller square)
-  var ds = s * 0.8;
-  var dcr = cr * 0.6;
-  ctx.beginPath();
-  ctx.moveTo(-ds + dcr, -ds);
-  ctx.lineTo(ds - dcr, -ds);
-  ctx.quadraticCurveTo(ds, -ds, ds, -ds + dcr);
-  ctx.lineTo(ds, ds - dcr);
-  ctx.quadraticCurveTo(ds, ds, ds - dcr, ds);
-  ctx.lineTo(-ds + dcr, ds);
-  ctx.quadraticCurveTo(-ds, ds, -ds, ds - dcr);
-  ctx.lineTo(-ds, -ds + dcr);
-  ctx.quadraticCurveTo(-ds, -ds, -ds + dcr, -ds);
-  ctx.closePath();
-  ctx.fillStyle = '#f5f0e8';
-  ctx.fill();
-
-  // Hour markers
-  ctx.fillStyle = '#333';
-  for (var i = 0; i < 4; i++) {
-    var angle = (i * Math.PI) / 2 - Math.PI / 2;
-    var mx = Math.cos(angle) * ds * 0.7;
-    var my = Math.sin(angle) * ds * 0.7;
-    ctx.fillRect(mx - 2, my - 2, 4, 4);
-  }
-
-  // Watch hands
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(0, -ds * 0.6);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(ds * 0.4, -ds * 0.3);
-  ctx.stroke();
-
-  // Crown
-  ctx.beginPath();
-  ctx.arc(s + 4, 0, 3.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#888';
-  ctx.fill();
-
-  // Brand name
-  drawBrandLabel(ctx, brand, r, size);
-}
-
-// -- Sport Diver style --
-function drawSportWatch(ctx, r, caseColor, brand, size) {
-  // Band stubs (chunky rubber)
-  ctx.fillStyle = '#333';
-  ctx.fillRect(-10, -r - 20, 20, 12);
-  ctx.fillRect(-10, r + 8, 20, 12);
-
-  // Lugs
-  ctx.fillStyle = '#555';
-  ctx.fillRect(-7, -r - 10, 14, 12);
-  ctx.fillRect(-7, r - 2, 14, 12);
-
-  // Outer bezel ring (thicker, slightly darker)
-  ctx.beginPath();
-  ctx.arc(0, 0, r + 3, 0, Math.PI * 2);
-  var darkerCase = darkenColor(caseColor, 0.7);
-  ctx.fillStyle = darkerCase;
-  ctx.fill();
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Inner case
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fillStyle = caseColor;
-  ctx.fill();
-
-  // Cream dial
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.75, 0, Math.PI * 2);
-  ctx.fillStyle = '#f5f0e8';
-  ctx.fill();
-
-  // Hour markers
-  ctx.fillStyle = '#333';
-  for (var i = 0; i < 4; i++) {
-    var angle = (i * Math.PI) / 2 - Math.PI / 2;
-    var mx = Math.cos(angle) * r * 0.6;
-    var my = Math.sin(angle) * r * 0.6;
-    ctx.fillRect(mx - 2, my - 2, 4, 4);
-  }
-
-  // Watch hands
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(0, -r * 0.5);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(r * 0.3, -r * 0.3);
-  ctx.stroke();
-
-  // Larger crown
-  ctx.beginPath();
-  ctx.arc(r + 6, 0, 5, 0, Math.PI * 2);
-  ctx.fillStyle = '#888';
-  ctx.fill();
-
-  // Brand name
-  drawBrandLabel(ctx, brand, r, size);
-}
-
-// -- Shared brand label drawing --
-function drawBrandLabel(ctx, brand, r, size) {
-  var fontSize = Math.max(11, size * 0.22);
-  ctx.font = 'bold ' + fontSize + 'px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  // Stroke first (outline), then fill -- standard Canvas text outline technique
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = '#ffffff';
-  ctx.strokeText(brand, 0, r * 0.3);
-  ctx.fillStyle = '#333';
-  ctx.fillText(brand, 0, r * 0.3);
-}
-
-// -- Darken a hex color --
-function darkenColor(hex, factor) {
-  var r = parseInt(hex.slice(1, 3), 16);
-  var g = parseInt(hex.slice(3, 5), 16);
-  var b = parseInt(hex.slice(5, 7), 16);
-  r = Math.floor(r * factor);
-  g = Math.floor(g * factor);
-  b = Math.floor(b * factor);
-  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+function drawWatch(ctx, watch) {
+  drawCard(ctx, watch);
 }
 
 // --- Trail Update & Rendering ---
@@ -1069,18 +932,24 @@ function initDecorWatches() {
   ];
   for (var i = 0; i < positions.length; i++) {
     var p = positions[i];
-    decorWatches.push({
+    var isFake = Math.random() < 0.4;
+    var dw = {
       x: 0, y: 0, // will be set relative to canvas size each frame
       xr: p.xr, yr: p.yr,
       size: WATCH_SIZE * (0.8 + Math.random() * 0.4),
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 0.5,
-      isFake: Math.random() < 0.4,
+      isFake: isFake,
+      isGolden: false,
       sneaky: false,
-      brand: Math.random() < 0.4 ? FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)] : 'Montignac',
-      style: WATCH_STYLES[Math.floor(Math.random() * WATCH_STYLES.length)],
+      brand: isFake ? FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)] : 'Montignac',
+      price: 10 + Math.floor(Math.random() * 90),
       slashed: false
-    });
+    };
+    createCardSprite(dw);
+    decorWatches.push(dw);
   }
 }
 
