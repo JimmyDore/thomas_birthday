@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 4 of 6 (Vinted Cards)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-08 -- Roadmap created for v1.1
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 04-01-PLAN.md
 
-Progress: [=======░░░] 70% (7/10 total plans across v1.0+v1.1)
+Progress: [========░░] 80% (8/10 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -22,6 +22,10 @@ Progress: [=======░░░] 70% (7/10 total plans across v1.0+v1.1)
 - Total plans completed: 7
 - Average duration: 3min
 - Total execution time: 22min
+
+**v1.1 Stats:**
+- Plans completed: 1
+- 04-01: 2min
 
 ## Accumulated Context
 
@@ -40,10 +44,13 @@ New v1.1 decisions:
 - [Milestone]: Two-act gameplay (buy then sell) adds depth
 - [Milestone]: Procedural Web Audio API sounds (no audio files)
 - [Roadmap]: Cards first, sound second, buy/sell last (risk isolation)
+- [04-01]: Offscreen canvas sprite caching -- shadowBlur only at spawn, not per frame
+- [04-01]: Single drawCardToCanvas handles both white and golden cards via isGolden flag
+- [04-01]: Cards carry decorative price property (10-99 EUR normal, 200-499 EUR golden)
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -52,5 +59,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Roadmap created for v1.1
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
