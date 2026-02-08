@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Make Thomas laugh instantly and give him a satisfying 2-minute arcade game to show his friends.
-**Current focus:** Milestone v1.1 -- Phase 7: Fix Price Consistency
+**Current focus:** Milestone v1.1 -- COMPLETE
 
 ## Current Position
 
 Phase: 7 of 7 (Fix Price Consistency)
-Plan: 0 of 0 in current phase
-Status: Not started
-Last activity: 2026-02-08 -- Added Phase 7 to fix price mismatch between Act 1 and Act 2
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 07-01-PLAN.md (Unify price/cost system)
 
-Progress: [==============] 93% (14/15 total plans across v1.0+v1.1)
+Progress: [===============] 100% (15/15 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [==============] 93% (14/15 total plans across v1.0+v1.1)
 - Total execution time: 22min
 
 **v1.1 Stats:**
-- Plans completed: 7
+- Plans completed: 8
 - 04-01: 2min
 - 04-02: 2min
 - 04.1-01: 2min
@@ -32,6 +32,7 @@ Progress: [==============] 93% (14/15 total plans across v1.0+v1.1)
 - 06-01: 3min
 - 06-02: 2min
 - 06-03: 4min
+- 07-01: 10min
 
 ## Accumulated Context
 
@@ -59,7 +60,6 @@ New v1.1 decisions:
 - [05-01]: SoundEngine IIFE owns single AudioContext + pre-generated noise buffer
 - [05-01]: Combo pitch escalation via semitone multiplier, capped at 12 steps
 - [06-01]: Five-state machine with explicit state names (no enum, just string comparison)
-- [06-01]: Inventory cost captured BEFORE combo multiplier is applied (uses raw watch.value)
 - [06-01]: Transition screen shows max 7 items with "... et N autre(s)" overflow
 - [06-02]: Buyer cards use blue/teal gradient (#e8f4f8 to #d0eef6) visually distinct from Act 1 white cards
 - [06-02]: Difficulty ramp via margins (50-120% to 5-30%) not speed; bad offer rate 15% to 50%
@@ -67,6 +67,10 @@ New v1.1 decisions:
 - [06-03]: Act 2 spawn interval lerps from 1.5s to 0.8s based on normalized time
 - [06-03]: endGame calculates finalProfit = act2Revenue - act1Spending (unsold is informational display only)
 - [06-03]: getRating thresholds: 100/40/0/-50 EUR for 5/4/3/2 stars
+- [07-01]: watch.price is single source of truth for cost -- no more dual price/value system
+- [07-01]: Combo gives purchase discount (price / multiplier) -- rewards streaks with cheaper buys
+- [07-01]: purchaseCost passed as parameter to addToInventory (avoids mutating watch.price)
+- [07-01]: Golden/fake Act 2 offers use percentage margins relative to actual cost
 
 ### Roadmap Evolution
 
@@ -90,5 +94,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 06-03-PLAN.md (Act 2 Game Loop and Game Over)
+Stopped at: Completed 07-01-PLAN.md (Unify price/cost system and rescale Act 2 offers)
 Resume file: None

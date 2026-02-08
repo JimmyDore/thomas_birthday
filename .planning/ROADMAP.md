@@ -78,7 +78,7 @@ Plans:
 - [x] **Phase 4.1: Dynamics Tuning** - Tune card flight speed, arcs, and rotation for comfortable brand readability
 - [x] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
 - [x] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
-- [ ] **Phase 7: Fix Price Consistency** - Make display prices the real costs, fix Act 1/Act 2 price mismatch, rescale Act 2 offers
+- [x] **Phase 7: Fix Price Consistency** - Make display prices the real costs, fix Act 1/Act 2 price mismatch, rescale Act 2 offers
 
 ## Phase Details
 
@@ -153,7 +153,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 07-01-PLAN.md -- Unify price/cost system and rescale Act 2 offers
+- [x] 07-01-PLAN.md -- Unify price/cost system and rescale Act 2 offers
 
 ## Progress
 
@@ -169,4 +169,4 @@ Plans:
 | 4.1 Dynamics Tuning | v1.1 | 1/1 | Complete | 2026-02-08 |
 | 5. Sound Effects | v1.1 | 1/1 | Complete | 2026-02-08 |
 | 6. Buy/Sell Mechanic | v1.1 | 3/3 | Complete | 2026-02-08 |
-| 7. Fix Price Consistency | v1.1 | 0/1 | Not started | - |
+| 7. Fix Price Consistency | v1.1 | 1/1 | Complete | 2026-02-08 |
