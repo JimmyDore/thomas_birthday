@@ -1150,16 +1150,21 @@ function drawBuyerCardToCanvas(offCtx, ox, oy, card) {
   offCtx.fillStyle = '#007782';
   offCtx.fillText('OFFRE', ox + w / 2, oy + h * 0.12);
 
-  // Brand name centered at ~45% height
+  // Brand name centered at ~35% height
   var brandFontSize = Math.max(12, Math.min(16, w * 0.18));
   offCtx.font = 'bold ' + brandFontSize + 'px sans-serif';
   offCtx.fillStyle = '#333333';
-  offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.45);
+  offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.35);
 
-  // Offer price at ~70% height
+  // Purchase cost at ~55% height (subtle gray)
+  offCtx.font = '13px sans-serif';
+  offCtx.fillStyle = '#777777';
+  offCtx.fillText('Achete: ' + card.cost + ' EUR', ox + w / 2, oy + h * 0.55);
+
+  // Offer price at ~73% height (neutral dark blue — no green/red hint)
   offCtx.font = 'bold 18px sans-serif';
-  offCtx.fillStyle = card.isGoodDeal ? '#2a7d4f' : '#cc3333';
-  offCtx.fillText(card.offerPrice + ' EUR', ox + w / 2, oy + h * 0.70);
+  offCtx.fillStyle = '#1a5276';
+  offCtx.fillText(card.offerPrice + ' EUR', ox + w / 2, oy + h * 0.73);
 
   // Directional hints at bottom (~92% height)
   offCtx.font = '9px sans-serif';
@@ -1250,6 +1255,7 @@ function createBuyerOffer(inventoryItem, inventoryIndex, t) {
     brand: inventoryItem.brand,
     price: inventoryItem.price,
     offerPrice: offerPrice,
+    cost: inventoryItem.cost,
     isFake: inventoryItem.isFake,
     isGolden: inventoryItem.isGolden,
     isGoodDeal: isGoodDeal,
