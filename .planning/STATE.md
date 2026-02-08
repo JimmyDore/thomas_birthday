@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 6 of 6 (Buy/Sell Mechanic)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-08 -- Completed 06-01-PLAN.md
+Last activity: 2026-02-08 -- Completed 06-02-PLAN.md
 
-Progress: [============] 100% (12/12 total plans across v1.0+v1.1)
+Progress: [=============] 100% (13/14 total plans across v1.0+v1.1)
 
 ## Performance Metrics
 
@@ -24,12 +24,13 @@ Progress: [============] 100% (12/12 total plans across v1.0+v1.1)
 - Total execution time: 22min
 
 **v1.1 Stats:**
-- Plans completed: 5
+- Plans completed: 6
 - 04-01: 2min
 - 04-02: 2min
 - 04.1-01: 2min
 - 05-01: 2min
 - 06-01: 3min
+- 06-02: 2min
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ New v1.1 decisions:
 - [06-01]: Five-state machine with explicit state names (no enum, just string comparison)
 - [06-01]: Inventory cost captured BEFORE combo multiplier is applied (uses raw watch.value)
 - [06-01]: Transition screen shows max 7 items with "... et N autre(s)" overflow
+- [06-02]: Buyer cards use blue/teal gradient (#e8f4f8 to #d0eef6) visually distinct from Act 1 white cards
+- [06-02]: Difficulty ramp via margins (50-120% to 5-30%) not speed; bad offer rate 15% to 50%
+- [06-02]: Swipe direction detection: 30px minimum, horizontal > 0.8x vertical for filtering
 
 ### Roadmap Evolution
 
@@ -75,5 +79,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 06-01-PLAN.md (State Machine and Transition)
+Stopped at: Completed 06-02-PLAN.md (Buyer Card Primitives)
 Resume file: None
