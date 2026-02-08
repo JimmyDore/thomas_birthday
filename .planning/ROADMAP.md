@@ -74,7 +74,7 @@ Plans:
 
 **Milestone Goal:** Redesign watches as Vinted listing cards for readability, add a two-act buy/sell game mechanic, and bring sound effects to the game feel.
 
-- [ ] **Phase 4: Vinted Cards** - Watches become readable Vinted-style listing cards with proper split animation
+- [x] **Phase 4: Vinted Cards** - Watches become readable Vinted-style listing cards with proper split animation
 - [ ] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
 - [ ] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
 
@@ -93,8 +93,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Card rendering system: drawCardToCanvas, drawWatchIcon, createCardSprite, drawCard (replace 3 watch styles)
-- [ ] 04-02-PLAN.md -- Integration: wire cards into spawning, collision, split halves, decorative watches, and verify
+- [x] 04-01-PLAN.md -- Card rendering system: drawCardToCanvas, drawWatchIcon, createCardSprite, drawCard (replace 3 watch styles)
+- [x] 04-02-PLAN.md -- Integration: wire cards into spawning, collision, split halves, decorative watches, and verify
 
 ### Phase 5: Sound Effects
 **Goal**: Every slash, coin gain, and penalty has audio feedback that makes the game feel alive, using procedural synthesis with no audio files
@@ -136,6 +136,6 @@ Plans:
 | 2. Complete Game | v1.0 | 2/2 | Complete | 2026-02-07 |
 | 2.1 Gameplay Polish | v1.0 | 1/1 | Complete | 2026-02-07 |
 | 3. Ship It | v1.0 | 2/2 | Complete | 2026-02-07 |
-| 4. Vinted Cards | v1.1 | 0/2 | Not started | - |
+| 4. Vinted Cards | v1.1 | 2/2 | Complete | 2026-02-08 |
 | 5. Sound Effects | v1.1 | 0/1 | Not started | - |
 | 6. Buy/Sell Mechanic | v1.1 | 0/2 | Not started | - |

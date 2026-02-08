@@ -50,12 +50,12 @@
 
 ### Vinted Card Visuals
 
-- [ ] **CARD-01**: Watches displayed as white rounded Vinted-style listing cards
-- [ ] **CARD-02**: Brand name rendered clearly below watch illustration (14-16px bold on white background)
-- [ ] **CARD-03**: Cards fly and rotate using existing physics system
-- [ ] **CARD-04**: Slashed cards split into two tumbling halves
-- [ ] **CARD-05**: Fake cards look identical to real ones except for brand spelling
-- [ ] **CARD-06**: Golden card variant for jackpot watches
+- [x] **CARD-01**: Watches displayed as white rounded Vinted-style listing cards
+- [x] **CARD-02**: Brand name rendered clearly below watch illustration (14-16px bold on white background)
+- [x] **CARD-03**: Cards fly and rotate using existing physics system
+- [x] **CARD-04**: Slashed cards split into two tumbling halves
+- [x] **CARD-05**: Fake cards look identical to real ones except for brand spelling
+- [x] **CARD-06**: Golden card variant for jackpot watches
 
 ### Buy/Sell Mechanic
 
@@ -134,12 +134,12 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CARD-01 | Phase 4 | Pending |
-| CARD-02 | Phase 4 | Pending |
-| CARD-03 | Phase 4 | Pending |
-| CARD-04 | Phase 4 | Pending |
-| CARD-05 | Phase 4 | Pending |
-| CARD-06 | Phase 4 | Pending |
+| CARD-01 | Phase 4 | Complete |
+| CARD-02 | Phase 4 | Complete |
+| CARD-03 | Phase 4 | Complete |
+| CARD-04 | Phase 4 | Complete |
+| CARD-05 | Phase 4 | Complete |
+| CARD-06 | Phase 4 | Complete |
 | SFX-01 | Phase 5 | Pending |
 | SFX-02 | Phase 5 | Pending |
 | SFX-03 | Phase 5 | Pending |
