@@ -1,17 +1,14 @@
 # Roadmap: Watch Ninja
 
-## Overview
+## Milestones
 
-Watch Ninja ships in three phases: build the core slashing mechanics first so the game feels satisfying on mobile, then add game structure and all the Thomas-specific humor that makes it a birthday joke, then deploy to coupe-des-montres.jimmydore.fr. The entire project is a vanilla JS + Canvas static game targeting mobile Chrome.
+- v1.0 MVP - Phases 1-3 (shipped 2026-02-07)
+- v1.1 Vinted Cards & Buy/Sell - Phases 4-6 (in progress)
 
 ## Phases
 
-- [x] **Phase 1: Core Slashing** - Watches fly, player swipes to slash, score tracks profit in euros
-- [x] **Phase 2: Complete Game** - Timer, difficulty ramp, start/end screens, humor content, birthday personalization
-- [x] **Phase 2.1: Gameplay Polish** - Brand visibility, brutal difficulty, localStorage high scores (INSERTED)
-- [x] **Phase 3: Ship It** - nginx server block + SSL + CI/CD to coupe-des-montres.jimmydore.fr
-
-## Phase Details
+<details>
+<summary>v1.0 MVP (Phases 1-3) - SHIPPED 2026-02-07</summary>
 
 ### Phase 1: Core Slashing
 **Goal**: Player can swipe to slash watches on a mobile phone and see their profit change in euros
@@ -50,7 +47,7 @@ Plans:
 **Depends on**: Phase 2
 **Success Criteria** (what must be TRUE):
   1. Watch brand names (THOMAS vs fakes) are clearly legible on mobile during gameplay
-  2. Finishing with a positive score is extremely difficult — most players end negative
+  2. Finishing with a positive score is extremely difficult -- most players end negative
   3. Best scores are saved in localStorage and displayed on start/game over screens
 **Plans**: 1 plan
 
@@ -71,11 +68,74 @@ Plans:
 - [x] 03-01-PLAN.md -- Local deployment assets (OG tags, favicon, GitHub Actions workflow, repo + secrets setup)
 - [x] 03-02-PLAN.md -- VPS setup (git clone, nginx config, SSL) and end-to-end verification
 
+</details>
+
+### v1.1 Vinted Cards & Buy/Sell (In Progress)
+
+**Milestone Goal:** Redesign watches as Vinted listing cards for readability, add a two-act buy/sell game mechanic, and bring sound effects to the game feel.
+
+- [ ] **Phase 4: Vinted Cards** - Watches become readable Vinted-style listing cards with proper split animation
+- [ ] **Phase 5: Sound Effects** - Procedural audio feedback for every slash, coin, and penalty
+- [ ] **Phase 6: Buy/Sell Mechanic** - Two-act gameplay: buy watches in Act 1, sell inventory in Act 2
+
+## Phase Details
+
+### Phase 4: Vinted Cards
+**Goal**: Watches are displayed as white Vinted listing cards with clearly readable brand names, and slashing them feels as satisfying as the original circles
+**Depends on**: Phase 3 (v1.0 complete)
+**Requirements**: CARD-01, CARD-02, CARD-03, CARD-04, CARD-05, CARD-06
+**Success Criteria** (what must be TRUE):
+  1. Each watch flies across the screen as a white rounded-rectangle card with a watch illustration and brand name clearly readable at a glance (no squinting, no guessing)
+  2. Slashing a card splits it into two tumbling halves that fall off-screen with the same satisfying feel as the current watch split
+  3. Fake cards are visually identical to real cards -- only the brand spelling reveals the difference
+  4. Golden jackpot cards are visually distinct (gold color treatment) and still trigger the jackpot bonus
+  5. Cards fly, rotate, and respond to the existing physics system without framerate drops or visual glitches on mobile
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: TBD
+- [ ] 04-02: TBD
+
+### Phase 5: Sound Effects
+**Goal**: Every slash, coin gain, and penalty has audio feedback that makes the game feel alive, using procedural synthesis with no audio files
+**Depends on**: Phase 4 (cards render correctly for audio-visual pairing)
+**Requirements**: SFX-01, SFX-02, SFX-03, SFX-04, SFX-05, SFX-06
+**Success Criteria** (what must be TRUE):
+  1. Swiping produces an audible swoosh sound on every swipe, and hitting a card adds a distinct impact sound
+  2. Slashing a real card plays a coin/cha-ching sound, slashing a fake plays a penalty buzz -- the player can distinguish good from bad by sound alone
+  3. Golden jackpot cards play a special celebratory sound that feels different from regular coin sounds
+  4. All sounds work on mobile Chrome on first play (no silent first round, no tap-to-enable-audio prompt)
+**Plans**: TBD
+
+Plans:
+- [ ] 05-01: TBD
+
+### Phase 6: Buy/Sell Mechanic
+**Goal**: The game has two acts -- Act 1 "Les Achats" where the player buys watches and Act 2 "La Revente" where the player sells inventory to buyers -- with a combined final score
+**Depends on**: Phase 4 (card rendering), Phase 5 (audio feedback for Act 2 interactions)
+**Requirements**: MECH-01, MECH-02, MECH-03, MECH-04, MECH-05, MECH-06, MECH-07, MECH-08
+**Success Criteria** (what must be TRUE):
+  1. Act 1 plays as "Les Achats" -- the player slashes cards to buy watches and avoids fakes, building an inventory of purchased watches
+  2. A transition screen appears between acts showing the player's inventory summary before Act 2 begins
+  3. Act 2 plays as "La Revente" -- buyer offer cards fly in with varying prices, and the player slashes to accept deals (good offers = profit, lowball offers = penalty)
+  4. Act 2 gets trickier over time -- offers become harder to evaluate as the selling phase progresses
+  5. The game over screen shows the combined profit from both acts and a Vinted seller rating reflecting two-act performance
+**Plans**: TBD
+
+Plans:
+- [ ] 06-01: TBD
+- [ ] 06-02: TBD
+
 ## Progress
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Core Slashing | 2/2 | Complete | 2026-02-07 |
-| 2. Complete Game | 2/2 | Complete | 2026-02-07 |
-| 2.1 Gameplay Polish | 1/1 | Complete | 2026-02-07 |
-| 3. Ship It | 2/2 | Complete | 2026-02-07 |
+**Execution Order:** Phases execute in numeric order: 4 -> 5 -> 6
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Core Slashing | v1.0 | 2/2 | Complete | 2026-02-07 |
+| 2. Complete Game | v1.0 | 2/2 | Complete | 2026-02-07 |
+| 2.1 Gameplay Polish | v1.0 | 1/1 | Complete | 2026-02-07 |
+| 3. Ship It | v1.0 | 2/2 | Complete | 2026-02-07 |
+| 4. Vinted Cards | v1.1 | 0/2 | Not started | - |
+| 5. Sound Effects | v1.1 | 0/1 | Not started | - |
+| 6. Buy/Sell Mechanic | v1.1 | 0/2 | Not started | - |

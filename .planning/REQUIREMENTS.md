@@ -37,14 +37,14 @@
 
 - [x] **INFRA-01**: Static site hosted on VPS at coupe-des-montres.jimmydore.fr
 - [x] **INFRA-02**: nginx serving the game
-- [x] **INFRA-03**: GitHub Actions CI/CD — auto-deploy on push to master
+- [x] **INFRA-03**: GitHub Actions CI/CD -- auto-deploy on push to master
 - [x] **INFRA-04**: SSL certificate and nginx configuration on VPS
 
 ### Platform
 
 - [x] **PLAT-01**: Mobile-first design (Chrome on phone), touch-based swiping
 - [x] **PLAT-02**: Entire UI in French
-- [x] **PLAT-03**: No install needed — plays in browser
+- [x] **PLAT-03**: No install needed -- plays in browser
 
 ## v1.1 Requirements
 
@@ -59,12 +59,12 @@
 
 ### Buy/Sell Mechanic
 
-- [ ] **MECH-01**: Act 1 "Les Achats" — player slashes cards to buy watches, avoiding fakes
+- [ ] **MECH-01**: Act 1 "Les Achats" -- player slashes cards to buy watches, avoiding fakes
 - [ ] **MECH-02**: Inventory system tracks watches purchased during Act 1
 - [ ] **MECH-03**: Transition screen between Act 1 and Act 2 showing inventory summary
-- [ ] **MECH-04**: Act 2 "La Revente" — buyer offer cards fly in, player slashes to accept deals
-- [ ] **MECH-05**: Offer prices vary from lowball to great deals — player judges which to accept
-- [ ] **MECH-06**: Act 2 difficulty ramp — offers get trickier over time
+- [ ] **MECH-04**: Act 2 "La Revente" -- buyer offer cards fly in, player slashes to accept deals
+- [ ] **MECH-05**: Offer prices vary from lowball to great deals -- player judges which to accept
+- [ ] **MECH-06**: Act 2 difficulty ramp -- offers get trickier over time
 - [ ] **MECH-07**: Final score combines profit from both acts
 - [ ] **MECH-08**: Vinted seller rating updated to reflect two-act performance
 
@@ -83,8 +83,8 @@
 
 - **V2-03**: Share score button
 - **V2-04**: More watch brands and special items
-- Heart icon on Vinted cards — visual polish
-- Price tag on Vinted cards — visual polish
+- Heart icon on Vinted cards -- visual polish
+- Price tag on Vinted cards -- visual polish
 
 ## Out of Scope
 
@@ -94,7 +94,7 @@
 | Multiplayer | Single player birthday joke |
 | Backend/API | Fully static client-side game |
 | Desktop optimization | Mobile-only, Chrome on phone |
-| Game framework (Phaser, PixiJS) | Overkill — vanilla JS + Canvas |
+| Game framework (Phaser, PixiJS) | Overkill -- vanilla JS + Canvas |
 | Build tooling (webpack, vite) | Unnecessary complexity |
 | Pre-recorded audio files | Procedural synthesis keeps zero-dependency constraint |
 | Tutorial/onboarding | Fruit Ninja is universally understood |
@@ -130,37 +130,36 @@
 | PLAT-02 | Phase 1 | Complete |
 | PLAT-03 | Phase 1 | Complete |
 
-### v1.1 (Pending — mapped during roadmap creation)
+### v1.1
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CARD-01 | — | Pending |
-| CARD-02 | — | Pending |
-| CARD-03 | — | Pending |
-| CARD-04 | — | Pending |
-| CARD-05 | — | Pending |
-| CARD-06 | — | Pending |
-| MECH-01 | — | Pending |
-| MECH-02 | — | Pending |
-| MECH-03 | — | Pending |
-| MECH-04 | — | Pending |
-| MECH-05 | — | Pending |
-| MECH-06 | — | Pending |
-| MECH-07 | — | Pending |
-| MECH-08 | — | Pending |
-| SFX-01 | — | Pending |
-| SFX-02 | — | Pending |
-| SFX-03 | — | Pending |
-| SFX-04 | — | Pending |
-| SFX-05 | — | Pending |
-| SFX-06 | — | Pending |
+| CARD-01 | Phase 4 | Pending |
+| CARD-02 | Phase 4 | Pending |
+| CARD-03 | Phase 4 | Pending |
+| CARD-04 | Phase 4 | Pending |
+| CARD-05 | Phase 4 | Pending |
+| CARD-06 | Phase 4 | Pending |
+| SFX-01 | Phase 5 | Pending |
+| SFX-02 | Phase 5 | Pending |
+| SFX-03 | Phase 5 | Pending |
+| SFX-04 | Phase 5 | Pending |
+| SFX-05 | Phase 5 | Pending |
+| SFX-06 | Phase 5 | Pending |
+| MECH-01 | Phase 6 | Pending |
+| MECH-02 | Phase 6 | Pending |
+| MECH-03 | Phase 6 | Pending |
+| MECH-04 | Phase 6 | Pending |
+| MECH-05 | Phase 6 | Pending |
+| MECH-06 | Phase 6 | Pending |
+| MECH-07 | Phase 6 | Pending |
+| MECH-08 | Phase 6 | Pending |
 
 **Coverage:**
-- v1.0 requirements: 23 total (all complete)
-- v1.1 requirements: 20 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 20
+- v1.0 requirements: 23/23 mapped (all complete)
+- v1.1 requirements: 20/20 mapped
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-08 after v1.1 milestone requirements*
+*Last updated: 2026-02-08 after v1.1 roadmap creation*
