@@ -150,10 +150,10 @@ Plans:
   3. Act 2 buyer cards show "Payé: X EUR" where X matches what the player saw on the Act 1 card
   4. Act 2 offer prices are scaled to make sense against realistic purchase costs (not always 6-21 EUR range)
   5. Combo multiplier is properly reflected in inventory cost (applied before addToInventory, not after)
-**Plans**: 0 plans
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01-PLAN.md -- Unify price/cost system and rescale Act 2 offers
 
 ## Progress
 
@@ -169,4 +169,4 @@ Plans:
 | 4.1 Dynamics Tuning | v1.1 | 1/1 | Complete | 2026-02-08 |
 | 5. Sound Effects | v1.1 | 1/1 | Complete | 2026-02-08 |
 | 6. Buy/Sell Mechanic | v1.1 | 3/3 | Complete | 2026-02-08 |
-| 7. Fix Price Consistency | v1.1 | 0/0 | Not started | - |
+| 7. Fix Price Consistency | v1.1 | 0/1 | Not started | - |
