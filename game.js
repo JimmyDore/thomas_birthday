@@ -801,8 +801,6 @@ function slashWatch(watch, slashAngle) {
   } else {
     spawnLabelText(watch.x, watch.y - 15, 'Bonne affaire !', '50, 180, 80', 16);
   }
-  spawnFloatingText(watch.x, watch.y + 10, watch.value, watch.isFake, false);
-
   // Haptic feedback
   hapticFeedback(30);
 
