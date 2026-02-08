@@ -50,6 +50,189 @@ function saveBestScore(newScore) {
   return false;
 }
 
+// --- Sound Engine (Procedural Web Audio API) ---
+
+var SoundEngine = (function() {
+  var audioCtx = null;
+  var noiseBuffer = null;
+
+  function init() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+      latencyHint: 'interactive'
+    });
+    // Pre-generate reusable 2-second white noise buffer
+    var bufferSize = audioCtx.sampleRate * 2;
+    noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    var data = noiseBuffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+  }
+
+  function unlock() {
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  // SFX-01: Filtered white noise burst, 120ms
+  function playSwipe() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var now = audioCtx.currentTime;
+    var duration = 0.12;
+
+    var noise = audioCtx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    var bandpass = audioCtx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(2500, now);
+    bandpass.frequency.linearRampToValueAtTime(1000, now + duration);
+    bandpass.Q.setValueAtTime(0.8, now);
+
+    var gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(bandpass);
+    bandpass.connect(gain);
+    gain.connect(audioCtx.destination);
+    noise.start(now);
+    noise.stop(now + duration);
+  }
+
+  // SFX-02: Low sine thud + noise transient crack
+  function playImpact(isGolden) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var now = audioCtx.currentTime;
+    var duration = 0.15;
+
+    // Low thud oscillator
+    var osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(isGolden ? 200 : 150, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + duration);
+
+    var oscGain = audioCtx.createGain();
+    oscGain.gain.setValueAtTime(0.4, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    osc.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + duration);
+
+    // Noise transient layer (short crack)
+    var noise = audioCtx.createBufferSource();
+    noise.buffer = noiseBuffer;
+
+    var hipass = audioCtx.createBiquadFilter();
+    hipass.type = 'highpass';
+    hipass.frequency.setValueAtTime(4000, now);
+
+    var noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.2, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+    noise.connect(hipass);
+    hipass.connect(noiseGain);
+    noiseGain.connect(audioCtx.destination);
+    noise.start(now);
+    noise.stop(now + 0.05);
+  }
+
+  // SFX-03: Two-tone square wave arpeggio with combo pitch escalation
+  function playCoin(comboCount) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var now = audioCtx.currentTime;
+    var baseFreq = 800;
+    var pitchMult = Math.pow(2, Math.min(comboCount || 0, 12) * 2 / 12);
+    var freq = baseFreq * pitchMult;
+
+    // First tone (cha-)
+    var osc1 = audioCtx.createOscillator();
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(freq, now);
+    var gain1 = audioCtx.createGain();
+    gain1.gain.setValueAtTime(0.15, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.12);
+
+    // Second tone (-ching) slightly higher, delayed
+    var osc2 = audioCtx.createOscillator();
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(freq * 1.5, now + 0.07);
+    var gain2 = audioCtx.createGain();
+    gain2.gain.setValueAtTime(0.001, now);
+    gain2.gain.linearRampToValueAtTime(0.15, now + 0.07);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now);
+    osc2.stop(now + 0.2);
+  }
+
+  // SFX-04: Detuned sawtooth buzz through lowpass filter
+  function playPenalty() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var now = audioCtx.currentTime;
+    var duration = 0.25;
+
+    for (var i = 0; i < 2; i++) {
+      var osc = audioCtx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(i === 0 ? 120 : 127, now);
+
+      var gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      var lowpass = audioCtx.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.setValueAtTime(600, now);
+
+      osc.connect(lowpass);
+      lowpass.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    }
+  }
+
+  // SFX-05: Triangle wave arpeggio C5-E5-G5-C6
+  function playJackpot() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var now = audioCtx.currentTime;
+    var freqs = [523, 659, 784, 1047];
+    var noteLen = 0.1;
+
+    for (var i = 0; i < freqs.length; i++) {
+      var startTime = now + i * 0.08;
+      var osc = audioCtx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freqs[i], startTime);
+
+      var gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.2, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteLen + 0.15);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + noteLen + 0.15);
+    }
+  }
+
+  return { init: init, unlock: unlock, playSwipe: playSwipe, playImpact: playImpact, playCoin: playCoin, playPenalty: playPenalty, playJackpot: playJackpot };
+})();
+
+SoundEngine.init();
+
 // --- Decorative Watches (start screen) ---
 var decorWatches = [];
 
@@ -163,6 +346,7 @@ function setupInput() {
 
     // gameState === 'playing' -- swipe logic
     isPointerDown = true;
+    SoundEngine.playSwipe();
     trailPoints.length = 0; // Clear old trail on new swipe
     trailPoints.push({ x: px, y: py, time: performance.now() });
   });
@@ -461,6 +645,16 @@ function slashWatch(watch, slashAngle) {
 
   // Haptic feedback
   hapticFeedback(30);
+
+  // Sound feedback
+  SoundEngine.playImpact(watch.isGolden);
+  if (watch.isGolden) {
+    SoundEngine.playJackpot();
+  } else if (watch.isFake) {
+    SoundEngine.playPenalty();
+  } else {
+    SoundEngine.playCoin(combo);
+  }
 
   // Remove the watch from active array
   var idx = watches.indexOf(watch);
@@ -1001,6 +1195,7 @@ function renderStart(dt) {
 function handleStartTap(px, py) {
   if (px >= startButton.x && px <= startButton.x + startButton.w &&
       py >= startButton.y && py <= startButton.y + startButton.h) {
+    SoundEngine.unlock();
     startGame();
   }
 }
@@ -1125,6 +1320,7 @@ function renderGameOver() {
 function handleReplayTap(px, py) {
   if (px >= replayButton.x && px <= replayButton.x + replayButton.w &&
       py >= replayButton.y && py <= replayButton.y + replayButton.h) {
+    SoundEngine.unlock();
     startGame();
   }
 }
