@@ -618,7 +618,8 @@ function addToInventory(watch) {
     isGolden: watch.isGolden,
     cost: Math.abs(watch.value),
     sold: false,
-    soldFor: 0
+    soldFor: 0,
+    offerPending: false
   });
 }
 
@@ -972,6 +973,177 @@ function drawCard(ctx, card) {
 
 function drawWatch(ctx, watch) {
   drawCard(ctx, watch);
+}
+
+// --- Buyer Card Drawing (Act 2 offer cards) ---
+
+function drawBuyerCardToCanvas(offCtx, ox, oy, card) {
+  var w = card.width;
+  var h = card.height;
+  var cr = 8; // corner radius
+
+  // Drop shadow (runs ONCE at sprite creation, not per frame)
+  offCtx.save();
+  offCtx.shadowColor = 'rgba(0,0,0,0.25)';
+  offCtx.shadowBlur = 6;
+  offCtx.shadowOffsetX = 0;
+  offCtx.shadowOffsetY = 3;
+
+  // Card body with blue/teal gradient
+  offCtx.beginPath();
+  offCtx.roundRect(ox, oy, w, h, cr);
+  var grad = offCtx.createLinearGradient(ox, oy, ox, oy + h);
+  grad.addColorStop(0, '#e8f4f8');
+  grad.addColorStop(1, '#d0eef6');
+  offCtx.fillStyle = grad;
+  offCtx.fill();
+  offCtx.restore(); // reset shadow
+
+  // Reset shadow explicitly
+  offCtx.shadowColor = 'transparent';
+
+  // Thin border (blue/teal)
+  offCtx.beginPath();
+  offCtx.roundRect(ox, oy, w, h, cr);
+  offCtx.strokeStyle = '#90cad8';
+  offCtx.lineWidth = 1;
+  offCtx.stroke();
+
+  // "OFFRE" label at top (~12% height)
+  offCtx.font = 'bold 10px sans-serif';
+  offCtx.textAlign = 'center';
+  offCtx.textBaseline = 'middle';
+  offCtx.fillStyle = '#007782';
+  offCtx.fillText('OFFRE', ox + w / 2, oy + h * 0.12);
+
+  // Brand name centered at ~45% height
+  var brandFontSize = Math.max(12, Math.min(16, w * 0.18));
+  offCtx.font = 'bold ' + brandFontSize + 'px sans-serif';
+  offCtx.fillStyle = '#333333';
+  offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.45);
+
+  // Offer price at ~70% height
+  offCtx.font = 'bold 18px sans-serif';
+  offCtx.fillStyle = card.isGoodDeal ? '#2a7d4f' : '#cc3333';
+  offCtx.fillText(card.offerPrice + ' EUR', ox + w / 2, oy + h * 0.70);
+
+  // Directional hints at bottom (~92% height)
+  offCtx.font = '9px sans-serif';
+  offCtx.fillStyle = 'rgba(0,0,0,0.3)';
+  offCtx.textAlign = 'left';
+  offCtx.fillText('\u2190 non', ox + 6, oy + h * 0.92);
+  offCtx.textAlign = 'right';
+  offCtx.fillText('oui \u2192', ox + w - 6, oy + h * 0.92);
+}
+
+function createBuyerSprite(card) {
+  var padding = 10; // shadow bleed room
+  var spriteW = (card.width + padding * 2) * dpr;
+  var spriteH = (card.height + padding * 2) * dpr;
+
+  var offCanvas = document.createElement('canvas');
+  offCanvas.width = spriteW;
+  offCanvas.height = spriteH;
+  var offCtx = offCanvas.getContext('2d');
+  offCtx.scale(dpr, dpr);
+
+  drawBuyerCardToCanvas(offCtx, padding, padding, card);
+
+  card.sprite = offCanvas;
+  card.spritePadding = padding;
+}
+
+function createBuyerOffer(inventoryItem, inventoryIndex, t) {
+  // t = normalized Act 2 time (0 to 1) for difficulty ramp
+  var offerPrice;
+  var isGoodDeal;
+
+  if (inventoryItem.isGolden) {
+    // Golden watches: premium offers 150-400 EUR
+    offerPrice = 150 + Math.floor(Math.random() * 251);
+    isGoodDeal = offerPrice > inventoryItem.cost;
+  } else if (inventoryItem.isFake) {
+    // Fake watches: always low offers, 5-15 EUR
+    offerPrice = 5 + Math.floor(Math.random() * 11);
+    isGoodDeal = offerPrice > inventoryItem.cost;
+  } else {
+    // Real watches: margin shrinks over Act 2 time
+    var badOfferRate = 0.15 + t * 0.35; // 15% early -> 50% late
+    var isBadOffer = Math.random() < badOfferRate;
+
+    if (isBadOffer) {
+      // Bad offer: -10% to -50% below cost
+      var discount = 0.10 + Math.random() * 0.40;
+      offerPrice = Math.max(1, Math.round(inventoryItem.cost * (1 - discount)));
+    } else {
+      // Good offer: margin from generous to tight
+      var minMarkup = 0.50 - t * 0.45; // 50% early -> 5% late
+      var maxMarkup = 1.20 - t * 0.90; // 120% early -> 30% late
+      minMarkup = Math.max(0.05, minMarkup);
+      maxMarkup = Math.max(minMarkup + 0.05, maxMarkup);
+      var markup = minMarkup + Math.random() * (maxMarkup - minMarkup);
+      offerPrice = Math.round(inventoryItem.cost * (1 + markup));
+    }
+    isGoodDeal = offerPrice > inventoryItem.cost;
+  }
+
+  // Spawn physics (same pattern as spawnWatch)
+  var fromLeft = Math.random() < 0.5;
+  var x = fromLeft
+    ? canvasWidth * (0.1 + Math.random() * 0.3)
+    : canvasWidth * (0.6 + Math.random() * 0.3);
+
+  var vx = fromLeft
+    ? (20 + Math.random() * 60)
+    : -(20 + Math.random() * 60);
+
+  var baseVy = canvasHeight * 0.65 + 100;
+  var vy = -(baseVy + Math.random() * canvasHeight * 0.15);
+
+  var cardW = CARD_WIDTH;
+  var cardH = CARD_HEIGHT;
+
+  var card = {
+    x: x,
+    y: canvasHeight + 50, // start below visible area
+    vx: vx,
+    vy: vy,
+    size: WATCH_SIZE,
+    width: cardW,
+    height: cardH,
+    rotation: 0,
+    rotationSpeed: (Math.random() - 0.5) * 0.5,
+    brand: inventoryItem.brand,
+    price: inventoryItem.price,
+    offerPrice: offerPrice,
+    isFake: inventoryItem.isFake,
+    isGolden: inventoryItem.isGolden,
+    isGoodDeal: isGoodDeal,
+    isBuyerOffer: true,
+    targetIndex: inventoryIndex,
+    slashed: false,
+    value: offerPrice
+  };
+
+  // Mark inventory item as having a pending offer
+  inventory[inventoryIndex].offerPending = true;
+
+  createBuyerSprite(card);
+  return card;
+}
+
+function findNextUnsoldItem() {
+  var len = inventory.length;
+  if (len === 0) return -1;
+
+  for (var i = 0; i < len; i++) {
+    var idx = (currentOfferIndex + i) % len;
+    if (!inventory[idx].sold && !inventory[idx].offerPending) {
+      currentOfferIndex = (idx + 1) % len;
+      return idx;
+    }
+  }
+  return -1; // all sold or pending
 }
 
 // --- Trail Update & Rendering ---
