@@ -118,10 +118,10 @@ Plans:
   2. Slashing a real card plays a coin/cha-ching sound, slashing a fake plays a penalty buzz -- the player can distinguish good from bad by sound alone
   3. Golden jackpot cards play a special celebratory sound that feels different from regular coin sounds
   4. All sounds work on mobile Chrome on first play (no silent first round, no tap-to-enable-audio prompt)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md -- SoundEngine with procedural synthesis (swoosh, impact, coin, penalty, jackpot) wired into all game events
 
 ### Phase 6: Buy/Sell Mechanic
 **Goal**: The game has two acts -- Act 1 "Les Achats" where the player buys watches and Act 2 "La Revente" where the player sells inventory to buyers -- with a combined final score
