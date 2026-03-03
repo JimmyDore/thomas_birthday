@@ -283,8 +283,8 @@ function pickFakeName(t) {
   var idx = tierStart + Math.floor(Math.random() * (tierEnd - tierStart));
   return FAKE_NAMES_PROGRESSION[Math.min(idx, len - 1)];
 }
-var CARD_WIDTH = 80;
-var CARD_HEIGHT = 110;
+var CARD_WIDTH = 105;
+var CARD_HEIGHT = 145;
 
 // --- Combo Multiplier ---
 
@@ -1055,15 +1055,14 @@ function drawCardToCanvas(offCtx, ox, oy, card) {
   drawWatchIcon(offCtx, iconCx, iconCy, iconR, isGolden);
 
   // Brand name at 75% height
-  var brandFontSize = Math.max(12, Math.min(16, w * 0.18));
-  offCtx.font = 'bold ' + brandFontSize + 'px sans-serif';
+  offCtx.font = 'bold 20px sans-serif';
   offCtx.textAlign = 'center';
   offCtx.textBaseline = 'middle';
   offCtx.fillStyle = isGolden ? '#5D4037' : '#333333';
   offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.75);
 
   // Price tag at 90% height
-  offCtx.font = '10px sans-serif';
+  offCtx.font = 'bold 14px sans-serif';
   offCtx.fillStyle = isGolden ? '#8B6914' : '#007782';
   offCtx.fillText(card.price + ' EUR', ox + w / 2, oy + h * 0.9);
 }
@@ -1138,27 +1137,26 @@ function drawBuyerCardToCanvas(offCtx, ox, oy, card) {
   offCtx.stroke();
 
   // "OFFRE" label at top (~12% height)
-  offCtx.font = 'bold 10px sans-serif';
+  offCtx.font = 'bold 12px sans-serif';
   offCtx.textAlign = 'center';
   offCtx.textBaseline = 'middle';
   offCtx.fillStyle = '#007782';
-  offCtx.fillText('OFFRE', ox + w / 2, oy + h * 0.12);
+  offCtx.fillText('OFFRE', ox + w / 2, oy + h * 0.10);
 
-  // Brand name centered at ~35% height
-  var brandFontSize = Math.max(12, Math.min(16, w * 0.18));
-  offCtx.font = 'bold ' + brandFontSize + 'px sans-serif';
+  // Brand name centered at ~32% height
+  offCtx.font = 'bold 20px sans-serif';
   offCtx.fillStyle = '#333333';
-  offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.35);
+  offCtx.fillText(card.brand, ox + w / 2, oy + h * 0.32);
 
-  // Purchase cost at ~55% height (subtle gray, small)
-  offCtx.font = '10px sans-serif';
+  // Purchase cost at ~50% height (subtle gray)
+  offCtx.font = 'bold 12px sans-serif';
   offCtx.fillStyle = '#999999';
-  offCtx.fillText('Paye: ' + card.cost + ' EUR', ox + w / 2, oy + h * 0.55);
+  offCtx.fillText('Paye: ' + card.cost + ' EUR', ox + w / 2, oy + h * 0.50);
 
-  // Offer price at ~73% height (neutral dark blue — no green/red hint)
-  offCtx.font = 'bold 18px sans-serif';
+  // Offer price at ~70% height (neutral dark blue — no green/red hint)
+  offCtx.font = 'bold 22px sans-serif';
   offCtx.fillStyle = '#1a5276';
-  offCtx.fillText(card.offerPrice + ' EUR', ox + w / 2, oy + h * 0.73);
+  offCtx.fillText(card.offerPrice + ' EUR', ox + w / 2, oy + h * 0.70);
 }
 
 function createBuyerSprite(card) {
@@ -1185,39 +1183,39 @@ function createBuyerOffer(inventoryItem, inventoryIndex, t) {
 
   if (inventoryItem.isGolden) {
     // Golden watches: percentage-margin offers scaled to golden cost (200-499 range)
-    var goldenBadRate = 0.15 + t * 0.35; // same ramp as reals
+    var goldenBadRate = 0.10 + t * 0.20; // 10% early -> 30% late
     if (Math.random() < goldenBadRate) {
-      // Bad offer: -5% to -30% below cost (golden retains more value)
-      var goldenDiscount = 0.05 + Math.random() * 0.25;
+      // Bad offer: -5% to -20% below cost (golden retains more value)
+      var goldenDiscount = 0.05 + Math.random() * 0.15;
       offerPrice = Math.max(1, Math.round(inventoryItem.cost * (1 - goldenDiscount)));
     } else {
-      // Good offer: +10% to +60% early, shrinking to +5% to +20% late
-      var goldenMinMarkup = Math.max(0.05, 0.10 + (1 - t) * 0.00);
-      var goldenMaxMarkup = Math.max(0.20, 0.60 - t * 0.40);
+      // Good offer: +20% to +80% early, shrinking to +10% to +35% late
+      var goldenMinMarkup = Math.max(0.10, 0.20 - t * 0.10);
+      var goldenMaxMarkup = Math.max(0.35, 0.80 - t * 0.45);
       goldenMinMarkup = Math.min(goldenMinMarkup, goldenMaxMarkup - 0.05);
       var goldenMarkup = goldenMinMarkup + Math.random() * (goldenMaxMarkup - goldenMinMarkup);
       offerPrice = Math.round(inventoryItem.cost * (1 + goldenMarkup));
     }
     isGoodDeal = offerPrice > inventoryItem.cost;
   } else if (inventoryItem.isFake) {
-    // Fake watches: 20-60% of cost (always a loss since you paid full price)
-    offerPrice = Math.max(1, Math.round(inventoryItem.cost * (0.20 + Math.random() * 0.40)));
+    // Fake watches: 30-70% of cost (always a loss since you paid full price)
+    offerPrice = Math.max(1, Math.round(inventoryItem.cost * (0.30 + Math.random() * 0.40)));
     isGoodDeal = offerPrice > inventoryItem.cost;
   } else {
     // Real watches: margin shrinks over Act 2 time
-    var badOfferRate = 0.15 + t * 0.35; // 15% early -> 50% late
+    var badOfferRate = 0.15 + t * 0.20; // 15% early -> 35% late
     var isBadOffer = Math.random() < badOfferRate;
 
     if (isBadOffer) {
-      // Bad offer: -10% to -50% below cost
-      var discount = 0.10 + Math.random() * 0.40;
+      // Bad offer: -5% to -35% below cost
+      var discount = 0.05 + Math.random() * 0.30;
       offerPrice = Math.max(1, Math.round(inventoryItem.cost * (1 - discount)));
     } else {
-      // Good offer: margin from generous to tight
-      var minMarkup = 0.50 - t * 0.45; // 50% early -> 5% late
-      var maxMarkup = 1.20 - t * 0.90; // 120% early -> 30% late
-      minMarkup = Math.max(0.05, minMarkup);
-      maxMarkup = Math.max(minMarkup + 0.05, maxMarkup);
+      // Good offer: margin from generous to decent
+      var minMarkup = 0.60 - t * 0.45; // 60% early -> 15% late
+      var maxMarkup = 1.50 - t * 1.00; // 150% early -> 50% late
+      minMarkup = Math.max(0.15, minMarkup);
+      maxMarkup = Math.max(minMarkup + 0.10, maxMarkup);
       var markup = minMarkup + Math.random() * (maxMarkup - minMarkup);
       offerPrice = Math.round(inventoryItem.cost * (1 + markup));
     }
